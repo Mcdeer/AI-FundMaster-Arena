@@ -426,5 +426,3 @@ export function getPeriod() {
   }
   return APP_STATE.period;
 }
-
-export { selectedStocks };
