@@ -24,6 +24,17 @@ let periodBtnListenersBound = false;
 let searchListenerBound = false;
 let customInputListenerBound = false;
 
+// 同步selectedStocks到APP_STATE.holdings
+function syncHoldingsToAppState() {
+  APP_STATE.holdings = selectedStocks.map(h => ({
+    code: h.code,
+    name: h.name,
+    sector: h.sector,
+    market: h.market,
+    weight: h.weight,
+  }));
+}
+
 // ==================== 初始化 ====================
 export function initBuilder() {
   selectedStocks = [];
@@ -213,17 +224,6 @@ function toggleStock({ code, name, sector, market }) {
   renderSelectedList();
   updateSectorPie();
   updateStartButton();
-}
-
-// 同步selectedStocks到APP_STATE.holdings
-function syncHoldingsToAppState() {
-  APP_STATE.holdings = selectedStocks.map(h => ({
-    code: h.code,
-    name: h.name,
-    sector: h.sector,
-    market: h.market,
-    weight: h.weight,
-  }));
 }
 
 // ==================== 等权分配 ====================
