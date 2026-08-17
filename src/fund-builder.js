@@ -27,6 +27,7 @@ let customInputListenerBound = false;
 // ==================== 初始化 ====================
 export function initBuilder() {
   selectedStocks = [];
+  syncHoldingsToAppState();
   currentMarket = 'a-share';
   currentSector = 'all';
 
@@ -204,12 +205,25 @@ function toggleStock({ code, name, sector, market }) {
   }
 
   equalizeWeights();
+  // 同步到APP_STATE
+  syncHoldingsToAppState();
   // 保持搜索状态，用当前搜索框的值重新渲染
   const searchQuery = document.getElementById('stock-search')?.value?.trim();
   renderStockGrid(searchQuery || undefined);
   renderSelectedList();
   updateSectorPie();
   updateStartButton();
+}
+
+// 同步selectedStocks到APP_STATE.holdings
+function syncHoldingsToAppState() {
+  APP_STATE.holdings = selectedStocks.map(h => ({
+    code: h.code,
+    name: h.name,
+    sector: h.sector,
+    market: h.market,
+    weight: h.weight,
+  }));
 }
 
 // ==================== 等权分配 ====================
@@ -277,6 +291,7 @@ function renderSelectedList() {
       if (numInput) numInput.value = e.target.value;
       if (!lockWeights) redistributeWeight(idx, parseInt(e.target.value));
       else {
+        syncHoldingsToAppState();
         renderSelectedList();
         updateSectorPie();
         updateStartButton();
@@ -286,6 +301,7 @@ function renderSelectedList() {
       if (!lockWeights) return; // 非锁定模式下在 input 已处理
       const idx = parseInt(slider.dataset.index);
       selectedStocks[idx].weight = parseInt(e.target.value);
+      syncHoldingsToAppState();
       renderSelectedList();
       updateSectorPie();
       updateStartButton();
@@ -303,6 +319,7 @@ function renderSelectedList() {
       if (slider) slider.value = val;
       if (!lockWeights) redistributeWeight(idx, val);
       else {
+        syncHoldingsToAppState();
         renderSelectedList();
         updateSectorPie();
         updateStartButton();
@@ -315,6 +332,7 @@ function renderSelectedList() {
       const idx = parseInt(btn.dataset.index);
       selectedStocks.splice(idx, 1);
       equalizeWeights();
+      syncHoldingsToAppState();
       renderStockGrid();
       renderSelectedList();
       updateSectorPie();
@@ -373,6 +391,7 @@ function redistributeWeight(changedIdx, newWeight) {
     selectedStocks[0].weight += (100 - finalTotal);
   }
 
+  syncHoldingsToAppState();
   renderSelectedList();
   updateSectorPie();
   updateStartButton();
