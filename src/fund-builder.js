@@ -3,7 +3,7 @@
  * 股票选择、权重调整、行业分布、回测周期选择
  */
 
-import { APP_STATE, switchScreen, updateStartButton, showToast } from './main.js';
+import { APP_STATE, showToast, updateStartButton } from './state.js';
 import { initPieChart, updatePieChart } from './charts.js';
 
 // 状态

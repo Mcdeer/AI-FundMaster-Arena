@@ -4,6 +4,7 @@
  */
 
 import './style.css';
+import { APP_STATE, showToast, updateStartButton } from './state.js';
 import { initBuilder, getHoldings, getPeriod } from './fund-builder.js';
 import { renderArena } from './arena.js';
 import { renderDiagnosis } from './diagnosis.js';
@@ -12,16 +13,8 @@ import { generateOpponents } from './engine/opponents.js';
 import { analyzeStyle } from './engine/analyzer.js';
 import { disposeAllCharts } from './charts.js';
 
-// ==================== 全局状态 ====================
-export const APP_STATE = {
-  currentScreen: 'builder',
-  fundName: '',
-  holdings: [],
-  period: '1y',
-  backtestResults: null,
-  stocksData: null,
-  userResult: null,
-};
+// 导出APP_STATE和showToast以保持兼容性
+export { APP_STATE, showToast, updateStartButton };
 
 // ==================== 粒子背景 ====================
 let particleAnimId = null;
@@ -97,32 +90,6 @@ function initParticles() {
     particleAnimId = requestAnimationFrame(animate);
   }
   animate();
-}
-
-// ==================== Toast提示组件 ====================
-let toastTimeout = null;
-export function showToast(message, type = 'info') {
-  // 移除已有的toast
-  const existingToast = document.getElementById('toast-message');
-  if (existingToast) {
-    existingToast.remove();
-  }
-  if (toastTimeout) {
-    clearTimeout(toastTimeout);
-  }
-
-  const toast = document.createElement('div');
-  toast.id = 'toast-message';
-  const bgColor = type === 'error' ? 'bg-red-500/90' : type === 'success' ? 'bg-green-500/90' : 'bg-neon-blue/90';
-  toast.className = `fixed top-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-fade-in`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-
-  toastTimeout = setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity 0.3s';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
 }
 
 // ==================== 屏幕切换 ====================
@@ -249,12 +216,6 @@ function handleRestart() {
   document.getElementById('btn-start').disabled = true;
   switchScreen('builder');
   initBuilder();
-}
-
-export function updateStartButton() {
-  const btn = document.getElementById('btn-start');
-  const holdings = getHoldings();
-  btn.disabled = holdings.length < 1;
 }
 
 // ==================== 初始化 ====================
