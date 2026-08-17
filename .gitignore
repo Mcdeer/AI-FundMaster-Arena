@@ -1,0 +1,10 @@
+node_modules/
+dist/
+server/
+src/
+public/
+*.log
+.env
+.DS_Store
+_start.js
+# Don't ignore docs/ — it's the deployment folder
