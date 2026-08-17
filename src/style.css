@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================== 全局 ===================== */
+* { box-sizing: border-box; }
+
+body {
+  background: linear-gradient(135deg, #0a0e17 0%, #111827 50%, #0f1219 100%);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #2d3d54;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3d5068;
+}
+
+/* ===================== 粒子背景 ===================== */
+#particle-canvas {
+  opacity: 0.4;
+}
+
+/* ===================== 毛玻璃卡片 ===================== */
+.glass-card {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ===================== 发光按钮 ===================== */
+.glow-btn {
+  background: linear-gradient(135deg, #1a56db 0%, #7c3aed 100%);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.glow-btn:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.5), 0 0 40px rgba(26, 86, 219, 0.3);
+  transform: translateY(-1px);
+}
+.glow-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.glow-btn:disabled {
+  background: #1e293b;
+  color: #64748b;
+}
+
+/* ===================== 市场Tab ===================== */
+.market-tab {
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+  border: 1px solid transparent;
+}
+.market-tab:hover {
+  background: rgba(255,255,255,0.1);
+  color: #e5e7eb;
+}
+.market-tab.active {
+  background: rgba(79, 195, 247, 0.15);
+  color: #4fc3f7;
+  border-color: rgba(79, 195, 247, 0.3);
+}
+
+/* ===================== 行业筛选按钮 ===================== */
+.sector-btn {
+  @apply px-3 py-1 rounded-full text-xs font-medium transition-all duration-200;
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.sector-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #e5e7eb;
+}
+.sector-btn.active {
+  background: rgba(105, 240, 174, 0.15);
+  color: #69f0ae;
+  border-color: rgba(105, 240, 174, 0.3);
+}
+
+/* ===================== 股票卡片 ===================== */
+.stock-card {
+  @apply rounded-xl p-3 cursor-pointer transition-all duration-200;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.stock-card:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(79, 195, 247, 0.3);
+  transform: translateY(-2px);
+}
+.stock-card.selected {
+  background: rgba(79, 195, 247, 0.12);
+  border-color: rgba(79, 195, 247, 0.5);
+  box-shadow: 0 0 15px rgba(79, 195, 247, 0.15);
+}
+.stock-card .change-up { color: #ff5252; }
+.stock-card .change-down { color: #69f0ae; }
+.stock-card .change-neutral { color: #9ca3af; }
+
+/* ===================== 已选股票项 ===================== */
+.selected-item {
+  @apply rounded-xl p-3 flex items-center gap-3;
+  background: rgba(79, 195, 247, 0.08);
+  border: 1px solid rgba(79, 195, 247, 0.15);
+}
+.selected-item .weight-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #4fc3f7, #7c3aed);
+  outline: none;
+}
+.selected-item .weight-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4fc3f7;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(79, 195, 247, 0.5);
+}
+
+/* ===================== 周期按钮 ===================== */
+.period-btn {
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200;
+  background: rgba(255,255,255,0.05);
+  color: #9ca3af;
+  border: 1px solid transparent;
+}
+.period-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #e5e7eb;
+}
+.period-btn.active {
+  background: rgba(240, 192, 96, 0.15);
+  color: #f0c060;
+  border-color: rgba(240, 192, 96, 0.3);
+}
+
+/* ===================== 三屏切换 ===================== */
+.screen {
+  display: none;
+}
+.screen.active {
+  display: block;
+  animation: fadeIn 0.5s ease-out;
+}
+.screen.hidden {
+  display: none;
+}
+
+/* ===================== 排行榜 ===================== */
+.rank-row {
+  @apply rounded-xl p-3 flex items-center gap-3 transition-all duration-300;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.rank-row:nth-child(1) {
+  background: rgba(240, 192, 96, 0.12);
+  border-color: rgba(240, 192, 96, 0.3);
+}
+.rank-row:nth-child(2) {
+  background: rgba(192, 192, 192, 0.1);
+  border-color: rgba(192, 192, 192, 0.2);
+}
+.rank-row:nth-child(3) {
+  background: rgba(205, 127, 50, 0.1);
+  border-color: rgba(205, 127, 50, 0.2);
+}
+.rank-badge {
+  @apply w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm;
+}
+
+/* ===================== 用户基金高亮 ===================== */
+.rank-row.user-highlight {
+  background: linear-gradient(135deg, rgba(79, 195, 247, 0.12), rgba(124, 58, 237, 0.08));
+  border: 1px solid rgba(79, 195, 247, 0.4) !important;
+  box-shadow: 0 0 20px rgba(79, 195, 247, 0.1), inset 0 0 20px rgba(79, 195, 247, 0.03);
+  position: relative;
+}
+.rank-row.user-highlight::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #4fc3f7, #7c3aed, #f0c060);
+  border-radius: 3px 0 0 3px;
+}
+.rank-row.user-highlight .rank-badge {
+  background: linear-gradient(135deg, #4fc3f7, #7c3aed);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(79, 195, 247, 0.4);
+}
+
+/* ===================== 诊断标签 ===================== */
+.diagnosis-badge {
+  @apply inline-block px-5 py-2 rounded-full text-lg font-bold;
+  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(79,195,247,0.2));
+  border: 1px solid rgba(124,58,237,0.3);
+  color: #b388ff;
+}
+
+/* ===================== 指标表格 ===================== */
+.metrics-table th, .metrics-table td {
+  @apply px-4 py-2 text-sm;
+}
+.metrics-table th {
+  @apply text-gray-400 font-medium;
+}
+.metrics-table td {
+  @apply font-mono;
+}
+.metric-up { color: #ff5252; }
+.metric-down { color: #69f0ae; }
+
+/* ===================== 加载动效 ===================== */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: #4fc3f7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===================== 响应式 ===================== */
+@media (max-width: 640px) {
+  .glass-card {
+    @apply p-4;
+  }
+  #chart-returns, #chart-radar {
+    height: 280px !important;
+  }
+}
