@@ -108,19 +108,13 @@ function renderChartInternal() {
     let data = r.chartData;
     if (data.length > maxLen) maxLen = data.length;
 
-    // 用户基金：生成预测
-    let forecastData = [];
-    if (isUser) {
-      const rawForecast = linearForecast(r.chartData, Math.max(1, Math.floor(maxLen * 0.05)));
-      if (rawForecast.length > 0 && liquidationAt < 0) { // 未爆仓才预测
-        maxLen = Math.max(maxLen, data.length + rawForecast.length);
-        forecastData = rawForecast;
-      }
-    }
-
     // 转换数据（检测爆仓截断）
     let displayData;
     let liquidationAt = -1;
+
+    // 用户基金：生成预测（在检测爆仓后执行）
+    let forecastData = [];
+
     if (isValueMode) {
       displayData = [];
       for (let d = 0; d < data.length; d++) {
@@ -134,6 +128,15 @@ function renderChartInternal() {
         const pct = roundTo((data[d] - 100) * lev, 1);
         if (pct <= -100) { liquidationAt = d; displayData.push(-100); break; }
         displayData.push(pct);
+      }
+    }
+
+    // 生成预测数据（只有在未爆仓时才预测）
+    if (isUser && liquidationAt < 0) {
+      const rawForecast = linearForecast(r.chartData, Math.max(1, Math.floor(maxLen * 0.05)));
+      if (rawForecast.length > 0) {
+        maxLen = Math.max(maxLen, data.length + rawForecast.length);
+        forecastData = rawForecast;
       }
     }
 
