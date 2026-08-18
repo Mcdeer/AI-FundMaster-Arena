@@ -96,34 +96,71 @@ function renderChartInternal() {
   const lev = currentLeverage;
   const isValueMode = currentChartMode === 'value';
 
-  const colors = ['#4fc3f7', '#ff5252', '#69f0ae', '#f0c060', '#b388ff', '#ff80ab', '#18ffff', '#ffab40'];
-  const lineStyles = ['solid', 'dashed', 'dashed', 'dashed', 'solid', 'solid', 'solid', 'solid'];
+  // 用户基金使用亮色，其他使用暗色
+  const userColor = '#4fc3f7'; // 亮蓝色
+  const otherColors = ['#69f0ae', '#f0c060', '#b388ff', '#ff80ab', '#18ffff', '#ffab40', '#ff5252'];
 
   const series = [];
   let maxLen = 0;
+  let userDataLen = 0;
 
+  // 先找到用户基金的数据长度
+  const userResult = results.find(r => r.isUser);
+  if (userResult) {
+    userDataLen = userResult.chartData.length;
+  }
+
+  // 计算最大长度（包括预测）
+  results.forEach((r, i) => {
+    if (r.chartData.length > maxLen) maxLen = r.chartData.length;
+  });
+
+  // 为用户基金生成预测数据
+  let userForecastData = [];
+  let userLiquidationAt = -1;
+  if (userResult) {
+    // 检查是否爆仓
+    const data = userResult.chartData;
+    for (let d = 0; d < data.length; d++) {
+      const checkValue = isValueMode ? (data[d] - 100) * lev : (data[d] - 100) * lev;
+      if (checkValue <= -100) {
+        userLiquidationAt = d;
+        break;
+      }
+    }
+
+    // 只有在未爆仓时才生成预测
+    if (userLiquidationAt < 0) {
+      const rawForecast = linearForecast(userResult.chartData, Math.max(1, Math.floor(maxLen * 0.05)));
+      if (rawForecast.length > 0) {
+        userForecastData = rawForecast;
+        maxLen = Math.max(maxLen, userDataLen + userForecastData.length);
+      }
+    }
+  }
+
+  // 生成日期标签
+  const forecastExtraLen = Math.max(0, maxLen - userDataLen);
+  const xLabels = generateDateLabels(maxLen, forecastExtraLen);
+
+  // 生成系列数据
   results.forEach((r, i) => {
     const isUser = r.isUser;
     const isBenchmark = r.isBenchmark;
-    let data = r.chartData;
-    if (data.length > maxLen) maxLen = data.length;
+    const data = r.chartData;
+    const color = isUser ? userColor : otherColors[(i - 1) % otherColors.length];
 
     // 转换数据（检测爆仓截断）
-    let displayData;
+    let displayData = [];
     let liquidationAt = -1;
 
-    // 用户基金：生成预测（在检测爆仓后执行）
-    let forecastData = [];
-
     if (isValueMode) {
-      displayData = [];
       for (let d = 0; d < data.length; d++) {
         const levPct = (data[d] - 100) * lev;
         if (levPct <= -100) { liquidationAt = d; displayData.push(0); break; }
         displayData.push(roundTo(amount * lev * data[d] / 100, 0));
       }
     } else {
-      displayData = [];
       for (let d = 0; d < data.length; d++) {
         const pct = roundTo((data[d] - 100) * lev, 1);
         if (pct <= -100) { liquidationAt = d; displayData.push(-100); break; }
@@ -131,26 +168,52 @@ function renderChartInternal() {
       }
     }
 
-    // 生成预测数据（只有在未爆仓时才预测）
-    if (isUser && liquidationAt < 0) {
-      const rawForecast = linearForecast(r.chartData, Math.max(1, Math.floor(maxLen * 0.05)));
-      if (rawForecast.length > 0) {
-        maxLen = Math.max(maxLen, data.length + rawForecast.length);
-        forecastData = rawForecast;
+    // 填充null到最大长度（用于对齐x轴）
+    while (displayData.length < maxLen) displayData.push(null);
+
+    // 用户基金：添加预测数据
+    let seriesData = [...displayData];
+    if (isUser && userForecastData.length > 0 && !isValueMode) {
+      // 在预测部分添加数据
+      for (let j = 0; j < userForecastData.length; j++) {
+        const forecastValue = roundTo((userForecastData[j] - 100) * lev, 1);
+        if (userDataLen + j < seriesData.length) {
+          seriesData[userDataLen + j] = forecastValue;
+        } else {
+          seriesData.push(forecastValue);
+        }
+      }
+    } else if (isUser && userForecastData.length > 0 && isValueMode) {
+      for (let j = 0; j < userForecastData.length; j++) {
+        const forecastValue = roundTo(amount * lev * userForecastData[j] / 100, 0);
+        if (userDataLen + j < seriesData.length) {
+          seriesData[userDataLen + j] = forecastValue;
+        } else {
+          seriesData.push(forecastValue);
+        }
       }
     }
 
+    // 主线条 - 所有基金都是实线
     series.push({
       name: r.label,
       type: 'line',
-      data: displayData,
+      data: seriesData,
       smooth: true,
       symbol: 'none',
-      lineStyle: { width: isUser ? 4 : isBenchmark ? 1.5 : 2, type: lineStyles[i] || 'solid', color: colors[i], opacity: isBenchmark ? 0.5 : 1 },
-      itemStyle: { color: colors[i] },
-      emphasis: { focus: 'series' },
+      lineStyle: {
+        width: isUser ? 4 : isBenchmark ? 1.5 : 2,
+        type: 'solid',
+        color: color,
+        opacity: isBenchmark ? 0.5 : 1
+      },
+      itemStyle: { color: color },
+      emphasis: {
+        focus: 'series',
+        lineStyle: { width: isUser ? 6 : 3 }
+      },
       z: isUser ? 10 : 1,
-      endLabel: isUser ? { show: true, formatter: r.label, color: colors[i], fontSize: 11, offset: [10, 0] } : undefined,
+      endLabel: isUser ? { show: true, formatter: r.label, color: color, fontSize: 11, offset: [10, 0] } : undefined,
       // 爆仓标记
       ...(liquidationAt >= 0 ? {
         markPoint: {
@@ -160,33 +223,49 @@ function renderChartInternal() {
       } : {}),
     });
 
-    // 预测虚线
-    if (forecastData.length > 0) {
-      const fData = isValueMode
-        ? forecastData.map(v => roundTo(amount * lev * v / 100, 0))
-        : forecastData.map(v => roundTo((v - 100) * lev, 1));
-      const padData = new Array(data.length).fill(null).concat(fData);
-      while (padData.length < maxLen) padData.push(null);
+    // 用户基金：添加预测虚线标记（从预测开始处到结束）
+    if (isUser && userForecastData.length > 0 && liquidationAt < 0) {
+      const forecastLineData = new Array(userDataLen).fill(null);
+      for (let j = 0; j < userForecastData.length; j++) {
+        const value = isValueMode
+          ? roundTo(amount * lev * userForecastData[j] / 100, 0)
+          : roundTo((userForecastData[j] - 100) * lev, 1);
+        forecastLineData.push(value);
+      }
+
       series.push({
-        name: r.label + '（预测）',
+        name: '预测走势',
         type: 'line',
-        data: padData,
+        data: forecastLineData,
         smooth: true,
         symbol: 'none',
-        lineStyle: { width: 2, type: 'dashed', color: colors[i], opacity: 0.4 },
-        itemStyle: { color: colors[i] },
-        z: 1,
+        lineStyle: { width: 3, type: 'dashed', color: color, opacity: 0.6 },
+        itemStyle: { color: color },
+        z: 9,
         silent: true,
       });
     }
   });
 
-  // 日期横轴
-  const forecastMainLen = results.find(r => r.isUser)?.chartData?.length || maxLen;
-  const forecastExtraLen = Math.max(0, maxLen - forecastMainLen);
-  const xLabels = generateDateLabels(maxLen, forecastExtraLen);
-
   const yAxisName = isValueMode ? '总价值（元）' : '收益率（%）';
+
+  // 计算Y轴范围
+  let yMin = Infinity, yMax = -Infinity;
+  series.forEach(s => {
+    if (s.data) {
+      s.data.forEach(v => {
+        if (v !== null && !isNaN(v)) {
+          yMin = Math.min(yMin, v);
+          yMax = Math.max(yMax, v);
+        }
+      });
+    }
+  });
+
+  // 添加一些边距
+  const yRange = yMax - yMin;
+  yMin = yMin - yRange * 0.1;
+  yMax = yMax + yRange * 0.1;
 
   const option = {
     backgroundColor: 'transparent',
@@ -196,36 +275,63 @@ function renderChartInternal() {
       borderColor: 'rgba(79,195,247,0.3)',
       textStyle: { color: '#e5e7eb', fontSize: 12 },
       formatter: function (params) {
+        // 过滤掉预测系列和null值
+        const validParams = params.filter(p => p.value !== null && p.value !== undefined && !p.seriesName.includes('预测'));
+        if (validParams.length === 0) return '';
+
         const date = params[0].axisValue.replace('🔮', '预测 ');
         let html = '<div style="font-weight:bold;margin-bottom:4px;">' + date + '</div>';
-        const sorted = [...params].sort((a, b) => {
-          if (a.seriesName.includes('预测')) return 1;
-          if (b.seriesName.includes('预测')) return -1;
-          return (b.value || 0) - (a.value || 0);
-        });
+
+        // 按收益率排序
+        const sorted = [...validParams].sort((a, b) => (b.value || 0) - (a.value || 0));
+
         for (const p of sorted) {
-          const isUser = results.find(r => r.label === p.seriesName.replace('（预测）', '') && r.isUser);
-          const isForecast = p.seriesName.includes('预测');
+          const isUser = results.find(r => r.label === p.seriesName && r.isUser);
           const prefix = isUser ? '⭐ ' : '';
-          const suffix = isForecast ? ' 🔮' : '';
           const val = isValueMode ? '¥' + Number(p.value).toLocaleString() : (p.value >= 0 ? '+' : '') + p.value.toFixed(1) + '%';
           html += '<div style="display:flex;align-items:center;gap:6px;' + (isUser ? 'font-weight:bold;' : '') + '">' +
-            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + p.color + ';' + (isForecast ? 'opacity:0.4;border:dashed 1px ' + p.color : '') + '"></span>' +
-            prefix + p.seriesName + suffix + ': ' + val + '</div>';
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + p.color + ';"></span>' +
+            prefix + p.seriesName + ': ' + val + '</div>';
         }
         return html;
       },
     },
-    legend: { bottom: 0, textStyle: { color: '#9ca3af', fontSize: 10 }, icon: 'roundRect', itemWidth: 12, itemHeight: 8 },
-    grid: { left: '4%', right: '8%', top: '3%', bottom: '15%' },
-    xAxis: { type: 'category', data: xLabels, axisLine: { lineStyle: { color: '#2d3d54' } }, axisTick: { show: false }, axisLabel: { color: '#6b7280', fontSize: 9, rotate: 30 }, splitLine: { show: false } },
+    legend: {
+      bottom: 0,
+      textStyle: { color: '#9ca3af', fontSize: 10 },
+      icon: 'roundRect',
+      itemWidth: 12,
+      itemHeight: 8,
+      // 只显示非预测系列
+      data: results.map(r => r.label)
+    },
+    grid: { left: '12%', right: '8%', top: '10%', bottom: '15%' },
+    xAxis: {
+      type: 'category',
+      data: xLabels,
+      axisLine: { lineStyle: { color: '#2d3d54' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#6b7280', fontSize: 9, rotate: 30 },
+      splitLine: { show: false }
+    },
     yAxis: {
-      type: 'value', name: yAxisName,
-      nameTextStyle: { color: '#6b7280', fontSize: 10, padding: [0, 40, 0, 0] },
-      axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: '#6b7280', fontSize: 10, formatter: isValueMode ? (v) => (v >= 10000 ? (v / 10000).toFixed(1) + '万' : v) : (v) => v + '%' },
+      type: 'value',
+      name: yAxisName,
+      nameLocation: 'middle',
+      nameGap: 50,
+      nameTextStyle: { color: '#9ca3af', fontSize: 12 },
+      axisLine: { show: true, lineStyle: { color: '#2d3d54' } },
+      axisTick: { show: true, lineStyle: { color: '#2d3d54' } },
+      axisLabel: {
+        color: '#6b7280',
+        fontSize: 10,
+        formatter: isValueMode
+          ? (v) => (v >= 10000 ? (v / 10000).toFixed(1) + '万' : v.toLocaleString())
+          : (v) => v.toFixed(0) + '%'
+      },
       splitLine: { lineStyle: { color: 'rgba(45,61,84,0.3)' } },
-      ...(isValueMode ? {} : { min: Math.min, max: Math.max }),
+      min: Math.floor(yMin),
+      max: Math.ceil(yMax),
     },
     series,
   };
@@ -233,7 +339,7 @@ function renderChartInternal() {
   returnChart.setOption(option, true);
 
   const forecastSection = document.getElementById('forecast-section');
-  if (forecastSection) forecastSection.classList.toggle('hidden', forecastMainLen === maxLen);
+  if (forecastSection) forecastSection.classList.toggle('hidden', userForecastData.length === 0);
 
   window.addEventListener('resize', () => returnChart?.resize());
 }
