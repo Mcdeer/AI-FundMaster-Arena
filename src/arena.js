@@ -114,41 +114,71 @@ function renderMetrics(results, investAmount, leverage) {
   const container = document.getElementById('metrics-table');
   if (!container) return;
 
-  const headers = ['基金', '累计收益', '绝对盈亏', '年化收益', '杠杆回撤', '夏普比率', '胜率'];
+  // 基础指标
+  const basicHeaders = ['基金', '累计收益', '年化收益', '最大回撤', '夏普比率', '胜率'];
+  
+  // 专业指标（可展开）
+  const proHeaders = ['索提诺', '信息比率', 'Calmar', '盈亏比', '评级', '风险等级'];
 
   const rows = results.map(r => {
     const returnCls = r.totalReturn >= 0 ? 'metric-up' : 'metric-down';
     const rawLevReturn = r.totalReturn * leverage;
     const levReturn = parseFloat(Math.max(-100, rawLevReturn).toFixed(1));
-    const absPnL = Math.round(investAmount * levReturn / 100);
-    const absPnLStr = (levReturn >= 0 ? '+' : '') + Number(absPnL).toLocaleString();
+    
+    // 基金评级星星
+    const ratingStars = '★'.repeat(r.fundRating || 0) + '☆'.repeat(5 - (r.fundRating || 0));
+    
     return `
       <tr class="border-b border-dark-600/30 hover:bg-dark-700/30 transition-colors">
         <td class="px-3 py-2.5 text-sm text-white font-medium whitespace-nowrap">
           ${r.isUser ? '⭐ ' : r.icon + ' '}${r.label}
         </td>
         <td class="px-3 py-2.5 font-mono text-sm ${returnCls}">${levReturn >= 0 ? '+' : ''}${levReturn.toFixed(1)}%</td>
-        <td class="px-3 py-2.5 font-mono text-sm ${returnCls}">${absPnLStr}元</td>
         <td class="px-3 py-2.5 font-mono text-sm text-gray-300">${r.annualizedReturn >= 0 ? '+' : ''}${r.annualizedReturn}%</td>
         <td class="px-3 py-2.5 font-mono text-sm text-gray-300">${(r.maxDrawdown * leverage).toFixed(1)}%</td>
-        <td class="px-3 py-2.5 font-mono text-sm text-gray-300">${r.sharpeRatio}</td>
+        <td class="px-3 py-2.5 font-mono text-sm ${r.sharpeRatio >= 1 ? 'text-neon-green' : r.sharpeRatio >= 0.5 ? 'text-gray-300' : 'text-neon-red'}">${r.sharpeRatio}</td>
         <td class="px-3 py-2.5 font-mono text-sm text-gray-300">${r.winRate}%</td>
       </tr>
+      ${r.isUser ? `
+      <tr class="border-b border-dark-600/30 bg-dark-700/20">
+        <td class="px-3 py-2 text-xs text-gray-500">专业指标</td>
+        <td class="px-3 py-2 font-mono text-xs text-gray-400">${r.sortinoRatio || '-'}</td>
+        <td class="px-3 py-2 font-mono text-xs ${r.informationRatio >= 0.5 ? 'text-neon-green' : 'text-gray-400'}">${r.informationRatio || '-'}</td>
+        <td class="px-3 py-2 font-mono text-xs text-gray-400">${r.calmarRatio || '-'}</td>
+        <td class="px-3 py-2 font-mono text-xs text-gray-400">${r.profitLossRatio || '-'}</td>
+        <td class="px-3 py-2 font-mono text-xs text-gold-400">${ratingStars}</td>
+        <td class="px-3 py-2 font-mono text-xs ${r.riskLevel === '高' ? 'text-neon-red' : r.riskLevel === '低' ? 'text-neon-green' : 'text-gray-400'}">${r.riskLevel}风险</td>
+      </tr>
+      ` : ''}
     `;
   }).join('');
 
   container.innerHTML = `
     <div class="overflow-x-auto">
-      <table class="metrics-table w-full">
+      <table class="metrics-table w-full text-xs">
         <thead>
           <tr class="border-b border-dark-500/30">
-            ${headers.map(h => `<th class="px-3 py-3 text-xs text-left font-medium whitespace-nowrap">${h}</th>`).join('')}
+            ${basicHeaders.map(h => `<th class="px-3 py-2 text-left font-medium whitespace-nowrap">${h}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
           ${rows}
         </tbody>
       </table>
+      <div class="mt-3 p-3 bg-dark-700/30 rounded-lg text-xs text-gray-400">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-neon-blue">ℹ️</span>
+          <span class="font-medium">专业指标说明：</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div><span class="text-neon-purple">夏普比率</span> - 风险调整后收益，>1优秀</div>
+          <div><span class="text-neon-purple">索提诺比率</span> - 只考虑下行风险</div>
+          <div><span class="text-neon-purple">信息比率</span> - 超额收益/跟踪误差</div>
+          <div><span class="text-neon-purple">Calmar比率</span> - 年化收益/最大回撤</div>
+          <div><span class="text-neon-purple">盈亏比</span> - 平均盈利/平均亏损</div>
+          <div><span class="text-gold-400">★评级</span> - 五星基金评级体系</div>
+        </div>
+      </div>
     </div>
   `;
 }

@@ -88,12 +88,73 @@ export function runBacktest(stocksData, holdings, period) {
   const annualizedVol = roundTo(dailyVol * Math.sqrt(TRADING_DAYS) * 100, 2);
 
   const riskFreeRate = 0.02;
+  
+  // 夏普比率（风险调整后收益）
   const sharpeRatio = annualizedVol > 0
     ? roundTo((annualizedReturn / 100 - riskFreeRate) / (annualizedVol / 100), 2)
+    : 0;
+  
+  // 索提诺比率（只考虑下行波动）
+  const downsideReturns = dailyReturns.filter(r => r < 0);
+  const downsideDev = downsideReturns.length > 0 
+    ? Math.sqrt(downsideReturns.reduce((a, r) => a + Math.pow(r - (downsideReturns.reduce((x, y) => x + y, 0) / downsideReturns.length), 2), 0) / downsideReturns.length)
+    : 0;
+  const sortinoRatio = downsideDev > 0
+    ? roundTo((annualizedReturn / 100 - riskFreeRate) / (downsideDev * Math.sqrt(TRADING_DAYS)), 2)
+    : 0;
+  
+  // 特雷诺比率（单位系统风险的超额收益）
+  // 简化计算，假设市场beta为1
+  const treynorRatio = roundTo((annualizedReturn / 100 - riskFreeRate) / 1, 2);
+  
+  // 信息比率（相对于基准的超额收益/跟踪误差）
+  const activeReturns = dailyReturns.map(r => r - riskFreeRate / TRADING_DAYS);
+  const trackingError = Math.sqrt(activeReturns.reduce((a, r) => a + r * r, 0) / activeReturns.length) * Math.sqrt(TRADING_DAYS);
+  const informationRatio = trackingError > 0
+    ? roundTo((annualizedReturn / 100 - riskFreeRate) / trackingError, 2)
+    : 0;
+  
+  // Calmar比率（年化收益/最大回撤）
+  const calmarRatio = maxDrawdown > 0
+    ? roundTo(annualizedReturn / maxDrawdown, 2)
     : 0;
 
   const upDays = dailyReturns.filter(r => r > 0).length;
   const winRate = roundTo((upDays / dailyReturns.length) * 100, 1);
+  
+  // 盈亏比（平均盈利/平均亏损）
+  const avgGain = dailyReturns.filter(r => r > 0).reduce((a, b) => a + b, 0) / dailyReturns.filter(r => r > 0).length || 0;
+  const avgLoss = Math.abs(dailyReturns.filter(r => r < 0).reduce((a, b) => a + b, 0) / dailyReturns.filter(r => r < 0).length) || 0;
+  const profitLossRatio = avgLoss > 0 ? roundTo(avgGain / avgLoss, 2) : 0;
+  
+  // 基金评级（五星制）
+  let fundRating = 0;
+  let ratingReasons = [];
+  
+  // 基于夏普比率评分
+  if (sharpeRatio >= 1.5) { fundRating += 2; ratingReasons.push('夏普比率优秀'); }
+  else if (sharpeRatio >= 1.0) { fundRating += 1.5; ratingReasons.push('夏普比率良好'); }
+  else if (sharpeRatio >= 0.5) { fundRating += 1; ratingReasons.push('夏普比率一般'); }
+  
+  // 基于最大回撤评分
+  if (maxDrawdown <= 10) { fundRating += 1.5; ratingReasons.push('回撤控制优秀'); }
+  else if (maxDrawdown <= 20) { fundRating += 1; ratingReasons.push('回撤控制良好'); }
+  else if (maxDrawdown <= 30) { fundRating += 0.5; }
+  
+  // 基于年化收益评分
+  if (annualizedReturn >= 20) { fundRating += 1.5; ratingReasons.push('收益表现优秀'); }
+  else if (annualizedReturn >= 10) { fundRating += 1; ratingReasons.push('收益表现良好'); }
+  else if (annualizedReturn >= 5) { fundRating += 0.5; }
+  
+  // 基于胜率评分
+  if (winRate >= 60) { fundRating += 0.5; ratingReasons.push('胜率较高'); }
+  
+  fundRating = Math.min(5, Math.max(1, Math.round(fundRating)));
+  
+  // 风险等级
+  let riskLevel = '中';
+  if (maxDrawdown <= 15 && annualizedVol <= 20) riskLevel = '低';
+  else if (maxDrawdown >= 30 || annualizedVol >= 40) riskLevel = '高';
 
   // 采样净值曲线
   const sampleInterval = Math.max(1, Math.floor(dailyValues.length / 50));
@@ -128,12 +189,20 @@ export function runBacktest(stocksData, holdings, period) {
     annualizedVol,
     maxDrawdown,
     sharpeRatio,
+    sortinoRatio,
+    treynorRatio,
+    informationRatio,
+    calmarRatio,
+    profitLossRatio,
     winRate,
+    fundRating,
+    ratingReasons,
+    riskLevel,
     initialValue,
     finalValue,
     chartData,
-    dateLabels, // 添加日期标签
-    days, // 添加回测天数
+    dateLabels,
+    days,
     holdings: holdings.map(h => {
       const s = stockMap[h.code];
       return { code: h.code, name: s?.name || h.code, weight: h.weight };
