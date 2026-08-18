@@ -146,18 +146,10 @@ async function handleStart() {
     amount = Math.max(100, Math.min(100000000, amount));
     const leverage = parseFloat(document.getElementById('leverage')?.value) || 1;
 
-    // 自动生成牛逼的基金名称
+    // 自动生成基金名称
     let fundName = APP_STATE.fundName || document.getElementById('fund-name')?.value?.trim();
     if (!fundName) {
-      const prefixes = ['超级', '至尊', '全球', '无敌', '永恒', '巅峰', '王者', '传奇', '霸道', '神级'];
-      const cores = ['永赢', '复兴', '伟业', '宏图', '盛世', '领航', '共赢', '鼎盛', '长虹', '聚富'];
-      const suffixes = ['混合配置', '精选组合', '价值成长', '多因子策略', '全天候对冲', '阿尔法增强', '量化优选', '绝对收益', '宏观对冲', '灵活配置'];
-      const names = holdings.map(h => h.name).slice(0, 2);
-      const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-      const core = cores[Math.floor(Math.random() * cores.length)];
-      const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-      fundName = prefix + core + suffix;
-      if (names.length > 0) fundName += '（重仓' + names.join('、') + '）';
+      fundName = generateFundName(holdings, APP_STATE.stocksData);
     }
 
     // 确保数据已加载
@@ -216,6 +208,92 @@ function handleRestart() {
   document.getElementById('btn-start').disabled = true;
   switchScreen('builder');
   initBuilder();
+}
+
+// ==================== 智能生成基金名称 ====================
+function generateFundName(holdings, stocksData) {
+  if (!holdings || holdings.length === 0) return '我的基金';
+
+  const stockMap = {};
+  if (stocksData && stocksData.stocks) {
+    stocksData.stocks.forEach(s => { stockMap[s.code] = s; });
+  }
+
+  // 分析持仓特征
+  const markets = {};
+  const sectors = {};
+  let hasTech = false, hasFinance = false, hasConsumer = false, hasMedical = false;
+
+  holdings.forEach(h => {
+    const stock = stockMap[h.code];
+    if (stock) {
+      markets[stock.market] = (markets[stock.market] || 0) + h.weight;
+      sectors[stock.sector] = (sectors[stock.sector] || 0) + h.weight;
+      if (stock.sector === '科技') hasTech = true;
+      if (stock.sector === '金融') hasFinance = true;
+      if (stock.sector === '消费') hasConsumer = true;
+      if (stock.sector === '医药') hasMedical = true;
+    }
+  });
+
+  // 确定市场特征
+  const marketEntries = Object.entries(markets).sort((a, b) => b[1] - a[1]);
+  const primaryMarket = marketEntries[0]?.[0] || 'a-share';
+  const marketCount = marketEntries.length;
+
+  // 市场前缀
+  const marketPrefixMap = {
+    'a-share': ['华夏', '国泰', '南方', '易方达', '嘉实', '博时', '广发', '富国'],
+    'hk': ['港股', '香港', '恒生', '中港', '沪港深'],
+    'us': ['纳斯达克', '标普', '美股', '全球', '海外'],
+    'index': ['指数', 'ETF', '被动']
+  };
+
+  // 如果多市场，使用全球/国际前缀
+  let prefixPool;
+  if (marketCount >= 3) {
+    prefixPool = ['全球', '国际', '环球', '世界', '跨市场'];
+  } else if (marketCount === 2) {
+    prefixPool = ['沪港深', '深港通', 'AH', '中美', '跨市场'];
+  } else {
+    prefixPool = marketPrefixMap[primaryMarket] || marketPrefixMap['a-share'];
+  }
+
+  // 根据持仓特征选择核心词
+  let corePool = [];
+  if (hasTech && holdings.length <= 3) {
+    corePool = ['创新', '科技', '成长', '新兴', '前沿', '智能'];
+  } else if (hasFinance && holdings.length <= 3) {
+    corePool = ['金融', '价值', '蓝筹', '红利', '稳健', '精选'];
+  } else if (hasConsumer && holdings.length <= 3) {
+    corePool = ['消费', '品质', '生活', '品牌', '升级'];
+  } else if (hasMedical && holdings.length <= 3) {
+    corePool = ['健康', '医疗', '生命', '医药', '生物'];
+  } else if (holdings.length >= 8) {
+    corePool = ['优选', '精选', '配置', '均衡', '多元', '全能'];
+  } else if (holdings.length <= 3) {
+    corePool = ['聚焦', '集中', '核心', '龙头', '精选', '优势'];
+  } else {
+    corePool = ['成长', '价值', '均衡', '轮动', '趋势', '精选', '优选', '灵活'];
+  }
+
+  // 后缀
+  const suffixPool = ['混合', '股票', '配置', '优选', '精选', '成长', '价值', '稳健', '进取', '灵活'];
+
+  // 随机选择
+  const prefix = prefixPool[Math.floor(Math.random() * prefixPool.length)];
+  const core = corePool[Math.floor(Math.random() * corePool.length)];
+  const suffix = suffixPool[Math.floor(Math.random() * suffixPool.length)];
+
+  // 组合名称（2-4个字的核心）
+  const patterns = [
+    prefix + core + suffix,
+    prefix + suffix + core,
+    core + suffix,
+    prefix + core
+  ];
+
+  return patterns[Math.floor(Math.random() * patterns.length)];
 }
 
 // ==================== 初始化 ====================

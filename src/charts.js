@@ -194,55 +194,75 @@ function renderChartInternal() {
       }
     }
 
-    // 主线条 - 所有基金都是实线
-    series.push({
-      name: r.label,
-      type: 'line',
-      data: seriesData,
-      smooth: true,
-      symbol: 'none',
-      lineStyle: {
-        width: isUser ? 4 : isBenchmark ? 1.5 : 2,
-        type: 'solid',
-        color: color,
-        opacity: isBenchmark ? 0.5 : 1
-      },
-      itemStyle: { color: color },
-      emphasis: {
-        focus: 'series',
-        lineStyle: { width: isUser ? 6 : 3 }
-      },
-      z: isUser ? 10 : 1,
-      endLabel: isUser ? { show: true, formatter: r.label, color: color, fontSize: 11, offset: [10, 0] } : undefined,
-      // 爆仓标记
-      ...(liquidationAt >= 0 ? {
-        markPoint: {
-          data: [{ name: '💥', coord: [liquidationAt, isValueMode ? 0 : -100], symbol: 'pin', symbolSize: 35, itemStyle: { color: '#ff5252' }, label: { show: true, formatter: '💥爆仓', fontSize: 14, color: '#ff5252', fontWeight: 'bold', offset: [0, -15] } }],
-          animation: false,
-        },
-      } : {}),
-    });
-
-    // 用户基金：添加预测虚线标记（从预测开始处到结束）
+    // 用户基金：分成历史数据和预测数据两个系列
     if (isUser && userForecastData.length > 0 && liquidationAt < 0) {
-      const forecastLineData = new Array(userDataLen).fill(null);
+      // 历史数据（实线）
+      const historyData = seriesData.slice(0, userDataLen);
+      // 预测数据（虚线）- 前面填充null以对齐x轴
+      const forecastData = new Array(userDataLen - 1).fill(null);
+      const lastHistoryValue = historyData[historyData.length - 1];
+      forecastData.push(lastHistoryValue); // 连接点
       for (let j = 0; j < userForecastData.length; j++) {
         const value = isValueMode
           ? roundTo(amount * lev * userForecastData[j] / 100, 0)
           : roundTo((userForecastData[j] - 100) * lev, 1);
-        forecastLineData.push(value);
+        forecastData.push(value);
       }
 
+      // 历史线条（实线）
+      series.push({
+        name: r.label,
+        type: 'line',
+        data: historyData,
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { width: 4, type: 'solid', color: color },
+        itemStyle: { color: color },
+        emphasis: { focus: 'series', lineStyle: { width: 6 } },
+        z: 10,
+        endLabel: { show: true, formatter: r.label, color: color, fontSize: 11, offset: [10, 0] },
+      });
+
+      // 预测线条（虚线）
       series.push({
         name: '预测走势',
         type: 'line',
-        data: forecastLineData,
+        data: forecastData,
         smooth: true,
         symbol: 'none',
-        lineStyle: { width: 3, type: 'dashed', color: color, opacity: 0.6 },
+        lineStyle: { width: 3, type: 'dashed', color: color, opacity: 0.7 },
         itemStyle: { color: color },
         z: 9,
         silent: true,
+      });
+    } else {
+      // 其他基金或没有预测的基金：使用单一系列
+      series.push({
+        name: r.label,
+        type: 'line',
+        data: seriesData,
+        smooth: true,
+        symbol: 'none',
+        lineStyle: {
+          width: isUser ? 4 : isBenchmark ? 1.5 : 2,
+          type: 'solid',
+          color: color,
+          opacity: isBenchmark ? 0.5 : 1
+        },
+        itemStyle: { color: color },
+        emphasis: {
+          focus: 'series',
+          lineStyle: { width: isUser ? 6 : 3 }
+        },
+        z: isUser ? 10 : 1,
+        endLabel: isUser ? { show: true, formatter: r.label, color: color, fontSize: 11, offset: [10, 0] } : undefined,
+        // 爆仓标记
+        ...(liquidationAt >= 0 ? {
+          markPoint: {
+            data: [{ name: '💥', coord: [liquidationAt, isValueMode ? 0 : -100], symbol: 'pin', symbolSize: 35, itemStyle: { color: '#ff5252' }, label: { show: true, formatter: '💥爆仓', fontSize: 14, color: '#ff5252', fontWeight: 'bold', offset: [0, -15] } }],
+            animation: false,
+          },
+        } : {}),
       });
     }
   });
