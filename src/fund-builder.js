@@ -224,35 +224,10 @@ function showStockDetail(code) {
   const stock = allStocks.find(s => s.code === code);
   if (!stock) return;
   
-  // 计算历史走势数据（取最近30个点）
-  const priceHistory = stock.prices.slice(-30);
+  // 计算历史走势数据（取最近60个点）
+  const priceHistory = stock.prices.slice(-60);
   const minPrice = Math.min(...priceHistory);
   const maxPrice = Math.max(...priceHistory);
-  const priceRange = maxPrice - minPrice;
-  
-  // 生成简单的ASCII走势图
-  const chartHeight = 8;
-  const chartWidth = 30;
-  const pricePoints = priceHistory.map((p, i) => {
-    const normalized = priceRange > 0 ? (p - minPrice) / priceRange : 0.5;
-    return Math.round((1 - normalized) * (chartHeight - 1));
-  });
-  
-  let chartLines = [];
-  for (let row = 0; row < chartHeight; row++) {
-    let line = '';
-    for (let col = 0; col < chartWidth; col++) {
-      const dataIndex = Math.floor(col * priceHistory.length / chartWidth);
-      if (pricePoints[dataIndex] === row) {
-        line += '●';
-      } else if (pricePoints[dataIndex] > row) {
-        line += '│';
-      } else {
-        line += ' ';
-      }
-    }
-    chartLines.push(line);
-  }
   
   const marketNames = { 'a-share': 'A股', 'hk': '港股', 'us': '美股', 'index': '指数' };
   
@@ -262,12 +237,19 @@ function showStockDetail(code) {
   const change = ((endPrice - startPrice) / startPrice * 100).toFixed(2);
   const changeColor = change >= 0 ? 'text-neon-red' : 'text-neon-green';
   const changeSymbol = change >= 0 ? '+' : '';
+  const lineColor = change >= 0 ? '#ff5252' : '#69f0ae';
+  
+  // 生成日期标签
+  const dateLabels = [];
+  for (let i = 0; i < priceHistory.length; i += 10) {
+    dateLabels.push(`${i + 1}日`);
+  }
   
   // 创建弹窗
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm';
   modal.innerHTML = `
-    <div class="bg-dark-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-dark-500 shadow-2xl animate-fade-in">
+    <div class="bg-dark-800 rounded-2xl p-6 max-w-lg w-full mx-4 border border-dark-500 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
       <!-- 头部 -->
       <div class="flex items-start justify-between mb-4">
         <div>
@@ -289,9 +271,19 @@ function showStockDetail(code) {
             <div class="text-2xl font-mono font-bold text-white">¥${stock.latestPrice?.toFixed(2) || '--'}</div>
           </div>
           <div class="text-right">
-            <div class="text-xs text-gray-500 mb-1">近30日涨跌</div>
+            <div class="text-xs text-gray-500 mb-1">近60日涨跌</div>
             <div class="text-xl font-mono font-bold ${changeColor}">${changeSymbol}${change}%</div>
           </div>
+        </div>
+      </div>
+      
+      <!-- 走势图 -->
+      <div class="bg-dark-700/30 rounded-xl p-4 mb-4">
+        <div class="text-xs text-gray-500 mb-2">近60日价格走势</div>
+        <div id="stock-price-chart" style="width: 100%; height: 200px;"></div>
+        <div class="flex justify-between text-xs text-gray-500 mt-2">
+          <span>最低: ¥${minPrice.toFixed(2)}</span>
+          <span>最高: ¥${maxPrice.toFixed(2)}</span>
         </div>
       </div>
       
@@ -300,28 +292,22 @@ function showStockDetail(code) {
         <div class="bg-dark-700/30 rounded-lg p-3">
           <div class="text-xs text-gray-500 mb-1">市盈率 (PE)</div>
           <div class="text-lg font-mono text-white">${stock.pe?.toFixed(1) || '--'}</div>
+          <div class="text-xs text-gray-600">${stock.pe > 30 ? '估值偏高' : stock.pe < 15 ? '估值偏低' : '估值合理'}</div>
         </div>
         <div class="bg-dark-700/30 rounded-lg p-3">
           <div class="text-xs text-gray-500 mb-1">市值</div>
           <div class="text-lg font-mono text-white">${(stock.marketCap / 10000).toFixed(0)}亿</div>
+          <div class="text-xs text-gray-600">${stock.marketCap > 10000 ? '大盘股' : stock.marketCap > 1000 ? '中盘股' : '小盘股'}</div>
         </div>
         <div class="bg-dark-700/30 rounded-lg p-3">
           <div class="text-xs text-gray-500 mb-1">营收增长</div>
           <div class="text-lg font-mono ${stock.revenueGrowth > 0 ? 'text-neon-red' : 'text-neon-green'}">${stock.revenueGrowth?.toFixed(1) || '--'}%</div>
+          <div class="text-xs text-gray-600">${stock.revenueGrowth > 20 ? '高增长' : stock.revenueGrowth > 0 ? '稳健增长' : '负增长'}</div>
         </div>
         <div class="bg-dark-700/30 rounded-lg p-3">
           <div class="text-xs text-gray-500 mb-1">ROE</div>
           <div class="text-lg font-mono text-white">${stock.roe?.toFixed(1) || '--'}%</div>
-        </div>
-      </div>
-      
-      <!-- 走势图 -->
-      <div class="bg-dark-700/30 rounded-xl p-4 mb-4">
-        <div class="text-xs text-gray-500 mb-2">近30日价格走势</div>
-        <div class="font-mono text-xs text-neon-blue leading-tight" style="white-space: pre; overflow-x: auto;">${chartLines.join('\n')}</div>
-        <div class="flex justify-between text-xs text-gray-500 mt-2">
-          <span>最低: ¥${minPrice.toFixed(2)}</span>
-          <span>最高: ¥${maxPrice.toFixed(2)}</span>
+          <div class="text-xs text-gray-600">${stock.roe > 15 ? '优秀' : stock.roe > 10 ? '良好' : '一般'}</div>
         </div>
       </div>
       
@@ -334,6 +320,70 @@ function showStockDetail(code) {
   `;
   
   document.body.appendChild(modal);
+  
+  // 渲染ECharts图表
+  setTimeout(() => {
+    const chartDom = document.getElementById('stock-price-chart');
+    if (chartDom && typeof echarts !== 'undefined') {
+      const chart = echarts.init(chartDom);
+      const option = {
+        backgroundColor: 'transparent',
+        grid: { left: '3%', right: '3%', top: '5%', bottom: '3%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: priceHistory.map((_, i) => i + 1),
+          axisLine: { lineStyle: { color: '#2d3d54' } },
+          axisLabel: { 
+            color: '#6b7280', 
+            fontSize: 10,
+            interval: 9,
+            formatter: (value) => `${value}日`
+          },
+          axisTick: { show: false }
+        },
+        yAxis: {
+          type: 'value',
+          scale: true,
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: { 
+            color: '#6b7280', 
+            fontSize: 10,
+            formatter: (value) => '¥' + value.toFixed(0)
+          },
+          splitLine: { lineStyle: { color: 'rgba(45,61,84,0.3)' } }
+        },
+        series: [{
+          data: priceHistory,
+          type: 'line',
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { width: 3, color: lineColor },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: lineColor + '40' },
+              { offset: 1, color: lineColor + '00' }
+            ])
+          }
+        }],
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: 'rgba(17,24,39,0.95)',
+          borderColor: lineColor,
+          textStyle: { color: '#e5e7eb', fontSize: 12 },
+          formatter: (params) => {
+            const price = params[0].value;
+            const day = params[0].axisValue;
+            return `<div style="font-weight:bold">第${day}天</div><div>价格: ¥${price.toFixed(2)}</div>`;
+          }
+        }
+      };
+      chart.setOption(option);
+      
+      // 响应式
+      window.addEventListener('resize', () => chart.resize());
+    }
+  }, 100);
   
   // 点击背景关闭
   modal.addEventListener('click', (e) => {
