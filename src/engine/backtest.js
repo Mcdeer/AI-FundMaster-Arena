@@ -98,12 +98,26 @@ export function runBacktest(stocksData, holdings, period) {
   // 采样净值曲线
   const sampleInterval = Math.max(1, Math.floor(dailyValues.length / 50));
   const chartData = [];
+  const chartDataIndices = []; // 记录采样点的索引，用于生成日期
   for (let i = 0; i < dailyValues.length; i += sampleInterval) {
     chartData.push(dailyValues[i]);
+    chartDataIndices.push(i);
   }
   if ((dailyValues.length - 1) % sampleInterval !== 0) {
     chartData.push(dailyValues[dailyValues.length - 1]);
+    chartDataIndices.push(dailyValues.length - 1);
   }
+
+  // 生成日期标签（基于回测周期）
+  const endDate = new Date(); // 回测结束日期为今天
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - days);
+  
+  const dateLabels = chartDataIndices.map(idx => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + idx);
+    return (d.getMonth() + 1) + '/' + d.getDate();
+  });
 
   return {
     name: 'user',
@@ -118,6 +132,8 @@ export function runBacktest(stocksData, holdings, period) {
     initialValue,
     finalValue,
     chartData,
+    dateLabels, // 添加日期标签
+    days, // 添加回测天数
     holdings: holdings.map(h => {
       const s = stockMap[h.code];
       return { code: h.code, name: s?.name || h.code, weight: h.weight };

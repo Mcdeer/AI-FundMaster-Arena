@@ -139,9 +139,30 @@ function renderChartInternal() {
     }
   }
 
-  // 生成日期标签
-  const forecastExtraLen = Math.max(0, maxLen - userDataLen);
-  const xLabels = generateDateLabels(maxLen, forecastExtraLen);
+  // 生成日期标签 - 使用回测数据返回的日期
+  let xLabels = [];
+  const userResultWithDates = results.find(r => r.isUser && r.dateLabels);
+  if (userResultWithDates && userResultWithDates.dateLabels) {
+    xLabels = [...userResultWithDates.dateLabels];
+  } else {
+    // 如果没有日期标签，使用默认生成
+    const forecastExtraLen = Math.max(0, maxLen - userDataLen);
+    xLabels = generateDateLabels(maxLen, forecastExtraLen);
+  }
+  
+  // 添加预测部分的日期标签
+  if (userForecastData.length > 0 && xLabels.length > 0) {
+    const lastDateStr = xLabels[xLabels.length - 1];
+    const [lastMonth, lastDay] = lastDateStr.split('/').map(Number);
+    for (let i = 1; i <= userForecastData.length; i++) {
+      const d = new Date(2026, lastMonth - 1, lastDay);
+      d.setDate(d.getDate() + i);
+      const label = (i === 1 || i === userForecastData.length || i % Math.max(1, Math.floor(userForecastData.length / 3)) === 0) 
+        ? '🔮' + (d.getMonth() + 1) + '/' + d.getDate()
+        : '';
+      xLabels.push(label);
+    }
+  }
 
   // 生成系列数据
   results.forEach((r, i) => {

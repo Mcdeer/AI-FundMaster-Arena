@@ -82,5 +82,16 @@ function makeOpponent(id, name, desc, icon, holdings, stocksData, period) {
   result.icon = icon;
   result.isUser = false;
   result.isBenchmark = (icon === '📊');
+  // 保存持仓信息用于展示
+  result.holdingsDetail = holdings.map(h => {
+    const stock = stocksData.stocks.find(s => s.code === h.code);
+    return {
+      code: h.code,
+      name: stock?.name || h.code,
+      weight: h.weight,
+      sector: stock?.sector || '未知',
+      market: stock?.market || '未知',
+    };
+  });
   return result;
 }

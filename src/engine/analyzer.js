@@ -63,16 +63,49 @@ function generateDetailedCommentary(bestTag, metrics, holdings, stockMap) {
 
   const parts = [];
 
+  // 分析实际持仓特征
+  const actualMarkets = {};
+  const actualSectors = {};
+  holdings.forEach(h => {
+    const s = stockMap[h.code];
+    if (s) {
+      actualMarkets[s.market] = (actualMarkets[s.market] || 0) + h.weight;
+      actualSectors[s.sector] = (actualSectors[s.sector] || 0) + h.weight;
+    }
+  });
+  
+  const actualMarketList = Object.entries(actualMarkets).sort((a, b) => b[1] - a[1]);
+  const actualSectorList = Object.entries(actualSectors).sort((a, b) => b[1] - a[1]);
+  const primaryMarket = actualMarketList[0]?.[0];
+  const primaryMarketWeight = actualMarketList[0]?.[1] || 0;
+  const marketCount = actualMarketList.length;
+
   // 第一段：风格定性
   parts.push(`🔍 你的投资风格是「${bestTag.emoji} ${bestTag.name}」，最接近的偶像是${bestTag.matchPerson}——${bestTag.personDesc}。${bestTag.matchPersonOrg ? '现任' + bestTag.matchPersonOrg + '。' : ''}`);
 
-  // 第二段：行业与市场
-  parts.push(`📊 你重仓「${topSector[0]}」(${topSector[1].toFixed(0)}%)，其次是「${secondSector[0]}」(${secondSector[1].toFixed(0)}%)。${topSector[1] > 50 ? '单一行业集中度偏高，涨跌都容易放大，建议适当分散。' : topSector[1] < 30 ? '行业分布均衡，分散化做得不错。' : '行业集中度适中，攻守兼备。'}`);
+  // 第二段：行业分析（基于实际持仓）
+  if (actualSectorList.length > 0) {
+    const topSec = actualSectorList[0];
+    const secondSec = actualSectorList[1] || ['无', 0];
+    parts.push(`📊 行业配置：重仓「${topSec[0]}」(${topSec[1].toFixed(0)}%)${secondSec[1] > 0 ? `，其次是「${secondSec[0]}」(${secondSec[1].toFixed(0)}%)` : ''}。${topSec[1] > 50 ? '单一行业集中度偏高，属于"把鸡蛋放在一个篮子里"的类型，涨跌都容易放大。' : topSec[1] < 30 ? '行业分布均衡，分散化做得不错，属于"不把鸡蛋放在一个篮子里"的稳健派。' : '行业集中度适中，攻守兼备。'}`);
+  }
 
-  if (markets.length >= 2) {
-    parts.push(`🌍 覆盖${markets.length}个市场：${markets.map(m => marketNames[m[0]] || m[0]).join('、')}。${markets.length >= 3 ? '全球化视野开阔，真正做到了「东方不亮西方亮」！' : '跨市场配置不错，可考虑进一步拓宽到更多海外市场。'}`);
-  } else {
-    parts.push(`🌍 目前仅配置${marketNames[markets[0]?.[0]] || '单一'}市场，建议加入纳指ETF或标普500ETF分散系统性风险。`);
+  // 第三段：市场配置分析（基于实际持仓）
+  if (marketCount >= 2) {
+    const marketDesc = actualMarketList.map(m => {
+      const name = marketNames[m[0]] || m[0];
+      return `${name}(${m[1].toFixed(0)}%)`;
+    }).join('、');
+    parts.push(`🌍 市场配置：覆盖${marketCount}个市场——${marketDesc}。${marketCount >= 3 ? '全球化视野开阔，真正做到了「东方不亮西方亮」！这配置，巴菲特看了都想抄作业。' : '跨市场配置不错，分散了单一市场的系统性风险。'}`);
+  } else if (primaryMarket) {
+    const marketName = marketNames[primaryMarket] || primaryMarket;
+    const singleMarketWarnings = {
+      'a-share': '全仓A股？格局小了！虽然国货当自强，但全球配置才能睡得香。建议适当配置港股和美股，分散单一市场风险。',
+      'hk': '专注港股？港股通确实有机会，但恒生指数波动大，建议适当配置A股和美股对冲风险。',
+      'us': 'All in美股？纳斯达克确实香，但美股也有回调风险。建议适当配置A股和港股，享受新兴市场红利。',
+      'index': '只买指数？被动投资确实省心，但主动选股才能创造超额收益。',
+    };
+    parts.push(`🌍 市场配置：${marketName}占比${primaryMarketWeight.toFixed(0)}%。${singleMarketWarnings[primaryMarket] || '单一市场配置风险集中，建议适当分散到其它市场。'}`);
   }
 
   // 第三段：收益与风险

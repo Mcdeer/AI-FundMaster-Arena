@@ -49,6 +49,23 @@ function renderRanking(results, investAmount, leverage) {
     const absPnL = Math.round(investAmount * levReturn / 100);
     const absPnLStr = (levReturn >= 0 ? '+' : '') + Number(absPnL).toLocaleString();
     const maxDD = parseFloat((r.maxDrawdown * leverage).toFixed(1));
+    
+    // 生成持仓详情HTML（仅AI对手）
+    let holdingsHtml = '';
+    if (!isUser && r.holdingsDetail && r.holdingsDetail.length > 0) {
+      const holdingsList = r.holdingsDetail.map(h => 
+        `<div class="flex justify-between text-xs py-1">
+          <span class="text-gray-400">${h.name}</span>
+          <span class="text-neon-blue font-mono">${h.weight}%</span>
+        </div>`
+      ).join('');
+      holdingsHtml = `
+        <div class="mt-2 pt-2 border-t border-dark-600/30 holdings-detail hidden" id="holdings-${i}">
+          <div class="text-xs text-gray-500 mb-1">持仓成分</div>
+          ${holdingsList}
+        </div>
+      `;
+    }
 
     return `
       <div class="rank-row ${bgClass} animate-slide-up" style="animation-delay: ${i * 0.08}s">
@@ -63,6 +80,8 @@ function renderRanking(results, investAmount, leverage) {
             ${!r.isUser && !r.isBenchmark ? '<span class="text-xs text-neon-purple px-2 py-0.5 rounded-full bg-dark-500/50">AI</span>' : ''}
           </div>
           <div class="text-xs text-gray-500">${r.description || ''}</div>
+          ${!isUser && r.holdingsDetail ? `<button class="text-xs text-neon-blue mt-1 hover:underline" onclick="toggleHoldings(${i})">查看持仓</button>` : ''}
+          ${holdingsHtml}
         </div>
         <div class="text-right flex-shrink-0">
           <div class="font-mono font-bold ${returnColor} text-base">
@@ -78,6 +97,16 @@ function renderRanking(results, investAmount, leverage) {
       </div>
     `;
   }).join('');
+  
+  // 添加切换持仓显示的函数
+  if (!window.toggleHoldings) {
+    window.toggleHoldings = function(index) {
+      const el = document.getElementById(`holdings-${index}`);
+      if (el) {
+        el.classList.toggle('hidden');
+      }
+    };
+  }
 }
 
 // ==================== 指标对比表 ====================
