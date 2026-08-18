@@ -185,7 +185,10 @@ function renderStockGrid(searchQuery) {
            data-sector="${s.sector}" data-market="${s.market}">
         <div class="flex items-center justify-between mb-1">
           <span class="text-white font-medium text-sm truncate flex-1">${s.name}</span>
-          ${isSelected ? '<span class="text-neon-blue text-xs ml-1">✓</span>' : ''}
+          <div class="flex items-center gap-1">
+            <button class="stock-detail-btn text-xs text-gray-500 hover:text-neon-blue px-1.5 py-0.5 rounded bg-dark-600/50 transition-colors" data-code="${s.code}" title="查看详情">ℹ️</button>
+            ${isSelected ? '<span class="text-neon-blue text-xs">✓</span>' : ''}
+          </div>
         </div>
         <div class="text-xs text-gray-500 mb-1">${s.code} · ${s.sector}</div>
         <div class="flex items-center justify-between text-xs">
@@ -198,9 +201,143 @@ function renderStockGrid(searchQuery) {
 
   // 绑定点击事件
   grid.querySelectorAll('.stock-card').forEach(card => {
-    card.addEventListener('click', () => {
+    // 左键点击选中/取消选中
+    card.addEventListener('click', (e) => {
+      // 如果点击的是详情按钮，不触发选中
+      if (e.target.closest('.stock-detail-btn')) return;
       toggleStock(card.dataset);
     });
+  });
+  
+  // 绑定详情按钮事件
+  grid.querySelectorAll('.stock-detail-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const code = btn.dataset.code;
+      showStockDetail(code);
+    });
+  });
+}
+
+// 显示股票详情弹窗
+function showStockDetail(code) {
+  const stock = allStocks.find(s => s.code === code);
+  if (!stock) return;
+  
+  // 计算历史走势数据（取最近30个点）
+  const priceHistory = stock.prices.slice(-30);
+  const minPrice = Math.min(...priceHistory);
+  const maxPrice = Math.max(...priceHistory);
+  const priceRange = maxPrice - minPrice;
+  
+  // 生成简单的ASCII走势图
+  const chartHeight = 8;
+  const chartWidth = 30;
+  const pricePoints = priceHistory.map((p, i) => {
+    const normalized = priceRange > 0 ? (p - minPrice) / priceRange : 0.5;
+    return Math.round((1 - normalized) * (chartHeight - 1));
+  });
+  
+  let chartLines = [];
+  for (let row = 0; row < chartHeight; row++) {
+    let line = '';
+    for (let col = 0; col < chartWidth; col++) {
+      const dataIndex = Math.floor(col * priceHistory.length / chartWidth);
+      if (pricePoints[dataIndex] === row) {
+        line += '●';
+      } else if (pricePoints[dataIndex] > row) {
+        line += '│';
+      } else {
+        line += ' ';
+      }
+    }
+    chartLines.push(line);
+  }
+  
+  const marketNames = { 'a-share': 'A股', 'hk': '港股', 'us': '美股', 'index': '指数' };
+  
+  // 计算涨跌幅
+  const startPrice = priceHistory[0];
+  const endPrice = priceHistory[priceHistory.length - 1];
+  const change = ((endPrice - startPrice) / startPrice * 100).toFixed(2);
+  const changeColor = change >= 0 ? 'text-neon-red' : 'text-neon-green';
+  const changeSymbol = change >= 0 ? '+' : '';
+  
+  // 创建弹窗
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm';
+  modal.innerHTML = `
+    <div class="bg-dark-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-dark-500 shadow-2xl animate-fade-in">
+      <!-- 头部 -->
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="text-xl font-bold text-white">${stock.name}</h3>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-sm text-gray-400">${stock.code}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-dark-600 text-gray-300">${marketNames[stock.market] || stock.market}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-dark-600 text-gray-300">${stock.sector}</span>
+          </div>
+        </div>
+        <button class="text-gray-500 hover:text-white text-2xl" onclick="this.closest('.fixed').remove()">&times;</button>
+      </div>
+      
+      <!-- 价格信息 -->
+      <div class="bg-dark-700/50 rounded-xl p-4 mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs text-gray-500 mb-1">最新价格</div>
+            <div class="text-2xl font-mono font-bold text-white">¥${stock.latestPrice?.toFixed(2) || '--'}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-gray-500 mb-1">近30日涨跌</div>
+            <div class="text-xl font-mono font-bold ${changeColor}">${changeSymbol}${change}%</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 关键指标 -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-dark-700/30 rounded-lg p-3">
+          <div class="text-xs text-gray-500 mb-1">市盈率 (PE)</div>
+          <div class="text-lg font-mono text-white">${stock.pe?.toFixed(1) || '--'}</div>
+        </div>
+        <div class="bg-dark-700/30 rounded-lg p-3">
+          <div class="text-xs text-gray-500 mb-1">市值</div>
+          <div class="text-lg font-mono text-white">${(stock.marketCap / 10000).toFixed(0)}亿</div>
+        </div>
+        <div class="bg-dark-700/30 rounded-lg p-3">
+          <div class="text-xs text-gray-500 mb-1">营收增长</div>
+          <div class="text-lg font-mono ${stock.revenueGrowth > 0 ? 'text-neon-red' : 'text-neon-green'}">${stock.revenueGrowth?.toFixed(1) || '--'}%</div>
+        </div>
+        <div class="bg-dark-700/30 rounded-lg p-3">
+          <div class="text-xs text-gray-500 mb-1">ROE</div>
+          <div class="text-lg font-mono text-white">${stock.roe?.toFixed(1) || '--'}%</div>
+        </div>
+      </div>
+      
+      <!-- 走势图 -->
+      <div class="bg-dark-700/30 rounded-xl p-4 mb-4">
+        <div class="text-xs text-gray-500 mb-2">近30日价格走势</div>
+        <div class="font-mono text-xs text-neon-blue leading-tight" style="white-space: pre; overflow-x: auto;">${chartLines.join('\n')}</div>
+        <div class="flex justify-between text-xs text-gray-500 mt-2">
+          <span>最低: ¥${minPrice.toFixed(2)}</span>
+          <span>最高: ¥${maxPrice.toFixed(2)}</span>
+        </div>
+      </div>
+      
+      <!-- 操作按钮 -->
+      <div class="flex gap-3">
+        <button class="flex-1 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-lg py-2.5 text-sm font-medium hover:bg-neon-blue/30 transition-colors" onclick="this.closest('.fixed').remove()">关闭</button>
+        <button class="flex-1 bg-neon-blue text-dark-900 rounded-lg py-2.5 text-sm font-medium hover:bg-neon-blue/90 transition-colors" onclick="toggleStock({code:'${stock.code}',name:'${stock.name}',sector:'${stock.sector}',market:'${stock.market}'}); this.closest('.fixed').remove();">加入组合</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // 点击背景关闭
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
   });
 }
 
