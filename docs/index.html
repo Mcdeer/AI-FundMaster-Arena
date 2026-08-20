@@ -6,30 +6,28 @@
   <title>AI基金经理挑战赛</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-  <!-- ═══════════════════════════════════════════ -->
-  <!--  API 配置区（修改这里的值即可切换服务）       -->
-  <!-- ═══════════════════════════════════════════ -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <!--  API 配置                                         -->
+  <!--  本地开发：cp config.example.js config.js 并填入 Key -->
+  <!--  线上部署：自动使用 Cloudflare Worker 代理         -->
+  <!--  Worker 持有 API Key，前端不暴露任何敏感信息      -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <script src="config.js"></script>
   <script>
-    // === LLM 点评服务 ===
-    // 公司内部AI（默认已配好，优先使用）
-    window.LLM_CONFIG = {
-      eastmoney: {
-        baseUrl: 'https://dd-ai-api.eastmoney.com/v1',
-        apiKey:  'YOUR_EASTMONEY_KEY_PLACEHOLDER',
-        model:   'DeepSeek-V4-Pro',
+    // config.js 不存在时，使用 Cloudflare Worker 代理（默认）
+    // Worker: https://aiproxy.mcy722801822.workers.dev
+    // Key 在 Worker 端 → 不会泄露
+    window.LLM_CONFIG = window.LLM_CONFIG || {
+      primary: {
+        baseUrl: 'https://aiproxy.mcy722801822.workers.dev',
+        apiKey:  'worker',   // Worker 忽略此值，用服务端 Key
+        model:   'deepseek-chat',
       },
-      // Google Gemini（可选，需自行申请 key: https://aistudio.google.com/apikey）
-      geminiApiKey: 'YOUR_GEMINI_KEY_PLACEHOLDER',
     };
-
-    // === 股票数据服务（可选，不配则用内置模拟数据） ===
-    // 东方财富 JSONP 实时行情（免费，无需 key）
-    window.DATA_CONFIG = {
-      useRealData: true,  // 设为 true 启用实时A股行情
-    };
+    window.DATA_CONFIG = window.DATA_CONFIG || { useRealData: false };
   </script>
-  <script type="module" crossorigin src="./assets/index-BwrASw12.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BC56vR2c.css">
+  <script type="module" crossorigin src="./assets/index-CGmsqb36.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-QlUyNqx0.css">
 </head>
 <body class="bg-dark-900 text-white min-h-screen overflow-x-hidden">
   <div id="app">
@@ -238,6 +236,6 @@
       </main>
     </div>
   </div>
-
+
 </body>
 </html>
