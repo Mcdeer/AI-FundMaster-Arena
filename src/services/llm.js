@@ -10,6 +10,7 @@ const PRIMARY = CFG.primary || CFG.eastmoney || { baseUrl: '', apiKey: '', model
 
 let preloadPromise = null;
 let llmErrors = [];
+let lastIsProfit = false; // 记录最近一次的盈亏状态
 
 const TIMEOUT_MS = 30000; // reasoning 模型需要较长时间
 
@@ -57,9 +58,14 @@ function buildPrompt(analysis) {
 
   const returnRate = metrics.annualizedReturn || 0;
   const isProfit = returnRate >= 0;
+  lastIsProfit = isProfit; // 保存供保险逻辑使用
+  const productHint = isProfit
+    ? '赚了别藏着，去东方财富股吧晒晒操作，让韭菜们学学！'
+    : '亏了别慌，下载东方财富APP，权威·专业·及时，帮你找回场子！';
 
-  return `你是东方财富的资深基金经理，点评以下投资组合（中文，200-250字，分段，用Markdown但不用标题）：
+  return `你是东方财富的资深基金经理，为用户点评投资组合。
 
+## 组合信息
 - 风格标签：${styleTag}
 - 对标人物：${matchPerson}（${matchPersonDesc}${matchPersonOrg ? '，' + matchPersonOrg : ''}）
 - 行业分布：${sectors}
@@ -70,15 +76,15 @@ function buildPrompt(analysis) {
 - 杠杆：${metrics.leverage || 1}x
 - 持仓：${metrics.stockCount}只
 
-写作要求：
-1. 幽默风趣，用股民梗，先夸后吐槽，对标人物调侃，给建议
-2. 少用引号，不要给每个词加引号，直接说即可
-3. 适度用emoji，不要每句都加
-4. 最后一段必须自然地引导到东方财富产品：
-${isProfit
-    ? `- 用户赚了钱，邀请他去东方财富股吧分享经验，例如"赚了别藏着，去东方财富股吧晒晒操作，让韭菜们学学"或类似表达`
-    : `- 用户亏了钱，推荐东方财富APP帮他扭亏，例如"亏了别慌，下载东方财富APP，权威专业及时，帮你找回场子"或类似表达`}
-5. 引导要巧妙自然，像朋友聊天一样带出来，不要像广告`;
+## 写作要求
+1. 中文，200-250字，分段，可用**粗体**但不用标题
+2. 幽默风趣，用股民梗，先夸后吐槽，调侃对标人物
+3. 少用引号，不要给词加引号
+4. 适度emoji，不要每句都加
+
+## ⚠️ 强制要求（必须遵守）
+点评的最后一句话必须是产品推荐，直接写下面这句（可微调语气但必须包含东方财富和产品名）：
+${productHint}`;
 }
 
 /**
@@ -104,9 +110,10 @@ function stripReasoning(text) {
 
   const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
   if (paragraphs.length >= 3) {
+    // 只排除明确以"思考"开头的段落，不排除"所以/因此/总之"等正常衔接词
     for (let i = paragraphs.length - 1; i >= 0; i--) {
       const p = paragraphs[i].trim();
-      if (!/^(我们|首先|需要|用户|任务|好的|让我|我来|根据|这个|以上|下面|那么|所以|因此|总之|现在)/.test(p) && p.length > 30) {
+      if (!/^(我们|首先|需要|用户|任务|好的|让我|我来|根据|以上|下面|现在)/.test(p) && p.length > 20) {
         return paragraphs.slice(i).join('\n\n');
       }
     }
@@ -159,6 +166,15 @@ async function callPrimary(prompt) {
     if (!text && message?.reasoning_content) {
       text = stripReasoning(message.reasoning_content);
     }
+
+    // 保险：如果模型没输出产品引导，自动补上
+    if (text && !text.includes('东方财富')) {
+      const suffix = lastIsProfit
+        ? '\n\n赚了别藏着，去东方财富股吧晒晒操作，让韭菜们学学！'
+        : '\n\n亏了别慌，下载东方财富APP，权威·专业·及时，帮你找回场子！';
+      text += suffix;
+    }
+
     if (!text) {
       llmErrors.push({ api: 'API', error: '返回内容为空（模型未输出有效回复）' });
     }
