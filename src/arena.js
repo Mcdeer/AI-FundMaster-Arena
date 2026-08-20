@@ -74,7 +74,7 @@ function renderRanking(results, investAmount, leverage) {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
             <span class="text-white font-medium text-sm truncate">
-              ${isUser ? '⭐ ' : ''}${r.label}
+              ${isUser ? '' : ''}${r.label}
             </span>
             ${r.isBenchmark ? '<span class="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-dark-500/50">基准</span>' : ''}
             ${!r.isUser && !r.isBenchmark ? '<span class="text-xs text-neon-purple px-2 py-0.5 rounded-full bg-dark-500/50">AI</span>' : ''}

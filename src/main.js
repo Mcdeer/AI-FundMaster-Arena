@@ -10,6 +10,7 @@ import { renderDiagnosis } from './diagnosis.js';
 import { runBacktest } from './engine/backtest.js';
 import { generateOpponents } from './engine/opponents.js';
 import { analyzeStyle } from './engine/analyzer.js';
+import { preloadCommentary, getCommentary, renderMarkdown } from './services/llm.js';
 import { disposeAllCharts } from './charts.js';
 
 // ==================== 全局状态 ====================
@@ -189,6 +190,12 @@ async function handleStart() {
 
     switchScreen('arena');
     renderArena({ fundName, period, results: allResults, amount, leverage });
+
+    // 提前预加载 AI 点评
+    const resultForPreload = { ...userResult, totalReturn: userResult.totalReturn * leverage, maxDrawdown: userResult.maxDrawdown * leverage };
+    const analysis = analyzeStyle(APP_STATE.stocksData, holdings, resultForPreload);
+    analysis.metrics.leverage = leverage;
+    preloadCommentary(analysis);
   } catch (err) {
     showToast('回测失败：' + err.message, 'error');
     btn.disabled = false;
@@ -196,9 +203,8 @@ async function handleStart() {
   }
 }
 
-function handleDiagnosis() {
+async function handleDiagnosis() {
   switchScreen('diagnosis');
-  // 注入杠杆信息（注意：这里不修改原始值，避免重复计算）
   const resultForAnalysis = {
     ...APP_STATE.userResult,
     totalReturn: APP_STATE.userResult.totalReturn * APP_STATE.leverage,
@@ -206,6 +212,17 @@ function handleDiagnosis() {
   };
   const analysis = analyzeStyle(APP_STATE.stocksData, APP_STATE.holdings, resultForAnalysis);
   analysis.metrics.leverage = APP_STATE.leverage;
+
+  // 获取预加载的 AI 点评（已经提前请求了）
+  const aiResults = await getCommentary();
+  if (aiResults && aiResults.length > 0) {
+    // 渲染所有模型的结果
+    analysis.aiResults = aiResults.map(r => ({
+      model: r.model,
+      html: renderMarkdown(r.text),
+    }));
+  }
+
   renderDiagnosis(analysis);
 }
 
@@ -303,7 +320,15 @@ function generateFundName(holdings, stocksData) {
     prefix + core
   ];
 
-  return patterns[Math.floor(Math.random() * patterns.length)];
+  // 确保名字够炫
+  const name = patterns[Math.floor(Math.random() * patterns.length)];
+
+  // 加炫酷前缀
+  const grandPrefixes = ['超级', '至尊', '王者', '巅峰', '传奇', '无敌', '神级', '霸道'];
+  const grandPrefix = grandPrefixes[Math.floor(Math.random() * grandPrefixes.length)];
+
+  // 组合：超级华夏创新混合（您）
+  return grandPrefix + name + '（您）';
 }
 
 // ==================== 初始化 ====================

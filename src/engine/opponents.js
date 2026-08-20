@@ -33,9 +33,9 @@ function generateBenchmarks(stocksData, period) {
   const nasdaqH = nasdaq.map(s => ({ code: s.code, weight: roundTo(100 / nasdaq.length, 1) }));
 
   return [
-    makeOpponent('benchmark-csi300', '沪深300', 'A股大盘蓝筹基准', '📊', csi300H, stocksData, period),
-    makeOpponent('benchmark-gem', '创业板指', 'A股成长创新基准', '📊', gemH, stocksData, period),
-    makeOpponent('benchmark-nasdaq', '纳斯达克100', '美股科技龙头基准', '📊', nasdaqH, stocksData, period),
+    makeOpponent('benchmark-csi300', '🇨🇳 沪深300', 'A股大盘蓝筹基准', '🇨🇳', csi300H, stocksData, period),
+    makeOpponent('benchmark-gem', '🇨🇳 创业板指', 'A股成长创新基准', '🇨🇳', gemH, stocksData, period),
+    makeOpponent('benchmark-nasdaq', '🇺🇸 纳斯达克100', '美股科技龙头基准', '🇺🇸', nasdaqH, stocksData, period),
   ];
 }
 
@@ -67,10 +67,10 @@ function generateAIStrategies(stocksData, period) {
   const reverseH = reverseStocks.map(s => ({ code: s.code, weight: roundTo(100 / reverseStocks.length, 1) }));
 
   return [
-    makeOpponent('ai-value', '🧓 价值大师', '深度价值投资', '🤖', valueH, stocksData, period),
-    makeOpponent('ai-growth', '🚀 成长猎手', '激进成长投资', '🤖', growthH, stocksData, period),
-    makeOpponent('ai-momentum', '📈 趋势追踪', '动量交易策略', '🤖', momentumH, stocksData, period),
-    makeOpponent('ai-reverse', '🔄 逆向投资', '超跌反转策略', '🤖', reverseH, stocksData, period),
+    makeOpponent('ai-value', '🐻 价值大师', '深度价值投资', '🐻', valueH, stocksData, period),
+    makeOpponent('ai-growth', '🐂 成长猎手', '激进成长投资', '🐂', growthH, stocksData, period),
+    makeOpponent('ai-momentum', '🐎 趋势追踪', '动量交易策略', '🐎', momentumH, stocksData, period),
+    makeOpponent('ai-reverse', '🦉 逆向投资', '超跌反转策略', '🦉', reverseH, stocksData, period),
   ];
 }
 

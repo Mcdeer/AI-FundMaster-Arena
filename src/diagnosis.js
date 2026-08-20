@@ -44,12 +44,19 @@ export function renderDiagnosis(analysis) {
 
   // AI点评
   const commentaryText = document.getElementById('commentary-text');
-  if (commentaryText && commentary) {
-    // 将 \n\n 转换为段落，保留格式
-    const formatted = commentary.split('\n\n').map(p => p.trim()).filter(Boolean);
-    commentaryText.innerHTML = formatted.map((p, i) =>
-      '<p style="margin-bottom:' + (i < formatted.length - 1 ? '12px' : '0') + ';line-height:1.8;">' + p + '</p>'
-    ).join('');
+  if (commentaryText) {
+    if (analysis.aiResults && analysis.aiResults.length > 0) {
+      let html = analysis.aiResults.map(r => r.html).join('<div style="margin:16px 0;border-top:1px dashed rgba(255,255,255,0.1);"></div>');
+      const models = analysis.aiResults.map(r => r.model).join(' + ');
+      html += '<div style="margin-top:12px;text-align:right;font-size:11px;color:#6b7280;">🤖 点评由 ' + models + ' 生成 · 仅供参考</div>';
+      commentaryText.innerHTML = html;
+    } else if (commentary) {
+      const formatted = commentary.split('\n\n').map(p => p.trim()).filter(Boolean);
+      commentaryText.innerHTML = formatted.map((p, i) =>
+        '<p style="margin-bottom:' + (i < formatted.length - 1 ? '12px' : '0') + ';line-height:1.8;">' + p + '</p>'
+      ).join('');
+      commentaryText.innerHTML += '<div style="margin-top:12px;text-align:right;font-size:11px;color:#6b7280;">📋 离线模板点评 · 仅供参考</div>';
+    }
   }
 
   // 附加指标

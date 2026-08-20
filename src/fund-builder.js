@@ -5,6 +5,7 @@
 
 import { APP_STATE, updateStartButton } from './main.js';
 import { initPieChart, updatePieChart } from './charts.js';
+import { calcSMA, calcRSI } from './services/indicators.js';
 
 // 状态
 let allStocks = [];
@@ -23,6 +24,7 @@ let marketTabListenersBound = false;
 let periodBtnListenersBound = false;
 let searchListenerBound = false;
 let customInputListenerBound = false;
+let randomBtnBound = false;
 
 // 同步selectedStocks到APP_STATE.holdings
 function syncHoldingsToAppState() {
@@ -47,7 +49,7 @@ export function initBuilder() {
   }
 
   // 绑定市场Tab（只绑定一次）
-  if (!marketTabListenersBound) {
+if (!marketTabListenersBound) {
     document.querySelectorAll('.market-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.market-tab').forEach(b => b.classList.remove('active'));
@@ -58,6 +60,12 @@ export function initBuilder() {
       });
     });
     marketTabListenersBound = true;
+  }
+
+  // 随机选股
+  if (!randomBtnBound) {
+    document.getElementById('btn-random')?.addEventListener('click', randomPick);
+    randomBtnBound = true;
   }
 
   // 搜索框（延迟搜索，避免拼音输入闪烁）
@@ -311,15 +319,57 @@ function showStockDetail(code) {
         </div>
       </div>
       
+      <!-- 技术指标 -->
+      <div class="bg-dark-700/30 rounded-lg p-3 mb-4">
+        <div class="text-xs text-gray-500 mb-2">📊 技术指标（基于历史模拟数据）</div>
+        <div class="grid grid-cols-3 gap-2 text-center" id="tech-indicators-${stock.code}">
+          <div class="text-xs text-gray-500">正在计算...</div>
+        </div>
+      </div>
+      
       <!-- 操作按钮 -->
       <div class="flex gap-3">
-        <button class="flex-1 bg-neon-blue/20 text-neon-blue border border-neon-blue/30 rounded-lg py-2.5 text-sm font-medium hover:bg-neon-blue/30 transition-colors" onclick="this.closest('.fixed').remove()">关闭</button>
-        <button class="flex-1 bg-neon-blue text-dark-900 rounded-lg py-2.5 text-sm font-medium hover:bg-neon-blue/90 transition-colors" onclick="toggleStock({code:'${stock.code}',name:'${stock.name}',sector:'${stock.sector}',market:'${stock.market}'}); this.closest('.fixed').remove();">加入组合</button>
+        <button class="stock-modal-close flex-1 bg-dark-600/50 text-gray-400 border border-dark-500 rounded-lg py-2.5 text-sm font-medium hover:bg-dark-500 hover:text-white transition-colors">关闭</button>
+        <button class="stock-modal-add flex-1 bg-gradient-to-r from-neon-blue to-neon-purple text-white rounded-lg py-2.5 text-sm font-medium hover:shadow-lg hover:shadow-neon-blue/20 transition-all" data-code="${stock.code}" data-name="${stock.name}" data-sector="${stock.sector}" data-market="${stock.market}">＋ 加入组合</button>
       </div>
     </div>
   `;
   
   document.body.appendChild(modal);
+  
+  // 绑定弹窗按钮事件
+  modal.querySelector('.stock-modal-close')?.addEventListener('click', () => modal.remove());
+  modal.querySelector('.stock-modal-add')?.addEventListener('click', function() {
+    const { code, name, sector, market } = this.dataset;
+    toggleStock({ code, name, sector, market });
+    modal.remove();
+  });
+  // 点击背景关闭
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+  // 计算技术指标
+  setTimeout(() => {
+    const container = document.getElementById(`tech-indicators-${stock.code}`);
+    if (!container) return;
+    const prices = stock.prices.slice(-120); // 最近120个交易日
+    const sma20 = calcSMA(prices, 20);
+    const sma60 = calcSMA(prices, 60);
+    const rsi = calcRSI(prices, 14);
+
+    const lastPrice = prices[prices.length - 1];
+    const ma20 = sma20[sma20.length - 1];
+    const ma60 = sma60[sma60.length - 1];
+    const lastRSI = rsi[rsi.length - 1];
+
+    const trend = ma20 > ma60 ? '📈 多头排列' : '📉 空头排列';
+    const rsiLabel = lastRSI > 70 ? '⚠️ 超买' : lastRSI < 30 ? '💡 超卖' : '➖ 中性';
+
+    container.innerHTML = `
+      <div><div class="text-xs text-gray-500">MA20</div><div class="font-mono text-sm ${ma20 > ma60 ? 'text-neon-red' : 'text-neon-green'}">${ma20?.toFixed(2) || '--'}</div></div>
+      <div><div class="text-xs text-gray-500">RSI(14)</div><div class="font-mono text-sm ${lastRSI > 70 ? 'text-neon-red' : lastRSI < 30 ? 'text-neon-green' : 'text-gray-300'}">${lastRSI?.toFixed(1) || '--'}</div></div>
+      <div><div class="text-xs text-gray-500">趋势</div><div class="text-xs">${trend}</div><div class="text-xs text-gray-500">${rsiLabel}</div></div>
+    `;
+  }, 100);
   
   // 渲染ECharts图表
   setTimeout(() => {
@@ -597,6 +647,29 @@ function updateSectorPie() {
   }));
 
   updatePieChart(data);
+}
+
+// ==================== 随机选股 ====================
+function randomPick() {
+  // 清空现有选择
+  selectedStocks = [];
+  // 随机选 4-7 只
+  const count = 4 + Math.floor(Math.random() * 4);
+  const pool = [...allStocks].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < Math.min(count, pool.length); i++) {
+    const s = pool[i];
+    selectedStocks.push({ code: s.code, name: s.name, sector: s.sector, market: s.market, weight: 0 });
+  }
+  equalizeWeights();
+  document.getElementById('stock-search').value = '';
+  currentMarket = 'a-share';
+  document.querySelectorAll('.market-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-market="a-share"]')?.classList.add('active');
+  renderStockGrid();
+  renderSelectedList();
+  updateSectorPie();
+  updateStartButton();
+  showToast(`🎲 随机选中 ${selectedStocks.length} 只股票，看看运气如何？`);
 }
 
 // ==================== 导出 ====================

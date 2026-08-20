@@ -243,6 +243,41 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ===================== 自定义复选框 ===================== */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #4b5563;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #4fc3f7, #7c3aed);
+  border-color: #4fc3f7;
+}
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: bold;
+}
+
+/* ===================== 随机按钮 ===================== */
+#btn-random {
+  font-family: inherit;
+}
+
+/* ===================== 详情按钮 ===================== */
+.stock-detail-btn {
+  font-family: inherit;
+  opacity: 0.6;
+}
+.stock-detail-btn:hover { opacity: 1; }
+
 /* ===================== 响应式 ===================== */
 @media (max-width: 640px) {
   .glass-card {

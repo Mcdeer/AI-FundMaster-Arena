@@ -6,6 +6,28 @@
   <title>AI基金经理挑战赛</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <!-- ═══════════════════════════════════════════ -->
+  <!--  API 配置区（修改这里的值即可切换服务）       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <script>
+    // === LLM 点评服务 ===
+    // 公司内部AI（默认已配好，优先使用）
+    window.LLM_CONFIG = {
+      eastmoney: {
+        baseUrl: 'https://dd-ai-api.eastmoney.com/v1',
+        apiKey:  'YOUR_EASTMONEY_KEY_PLACEHOLDER',
+        model:   'DeepSeek-V4-Pro',
+      },
+      // Google Gemini（可选，需自行申请 key: https://aistudio.google.com/apikey）
+      geminiApiKey: 'YOUR_GEMINI_KEY_PLACEHOLDER',
+    };
+
+    // === 股票数据服务（可选，不配则用内置模拟数据） ===
+    // 东方财富 JSONP 实时行情（免费，无需 key）
+    window.DATA_CONFIG = {
+      useRealData: true,  // 设为 true 启用实时A股行情
+    };
+  </script>
 </head>
 <body class="bg-dark-900 text-white min-h-screen overflow-x-hidden">
   <div id="app">
@@ -64,9 +86,10 @@
             </div>
 
             <!-- 搜索框 -->
-            <div class="mb-4">
+            <div class="mb-4 flex gap-2">
               <input id="stock-search" type="text" placeholder="🔍 搜索股票名称或代码..."
-                class="w-full bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-neon-blue transition-colors" />
+                class="flex-1 bg-dark-700 border border-dark-500 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-neon-blue transition-colors" />
+              <button id="btn-random" class="px-4 py-2.5 rounded-xl text-sm font-medium bg-dark-700 border border-dark-500 text-gray-400 hover:text-neon-purple hover:border-neon-purple/30 transition-all whitespace-nowrap">🎲 手气不错</button>
             </div>
 
             <!-- 行业筛选 -->
