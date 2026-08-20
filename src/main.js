@@ -170,6 +170,16 @@ async function handleStart() {
 
     // 前端回测
     const userResult = runBacktest(APP_STATE.stocksData, holdings, period);
+
+    // 如果用户选的周期超过数据范围，提示
+    if (period.startsWith('custom')) {
+      const months = parseInt(period.replace('custom', '')) || 18;
+      const maxMonths = Math.floor((APP_STATE.stocksData?.stocks?.[0]?.prices?.length || 1250) / 21);
+      if (months > maxMonths) {
+        showToast(`数据仅覆盖约${maxMonths}个月，已自动缩短至可用范围`, 'info');
+      }
+    }
+
     userResult.label = fundName;
     userResult.amount = amount;
     userResult.leverage = leverage;

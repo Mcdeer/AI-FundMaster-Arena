@@ -38,17 +38,27 @@ function getPeriodDays(period) {
  * 运行回测
  */
 export function runBacktest(stocksData, holdings, period) {
-  const days = Math.min(getPeriodDays(period), TRADING_DAYS * 10);
   const stockMap = {};
   stocksData.stocks.forEach(s => { stockMap[s.code] = s; });
+
+  // 计算可用数据长度（取所有持仓股票的最短价格序列）
+  const maxAvailableDays = holdings.reduce((min, h) => {
+    const stock = stockMap[h.code];
+    return stock ? Math.min(min, stock.prices.length) : min;
+  }, Infinity);
+  const totalDays = isFinite(maxAvailableDays) ? maxAvailableDays : TRADING_DAYS * 5;
+
+  // 回测天数不能超过实际数据长度
+  const requestedDays = Math.min(getPeriodDays(period), TRADING_DAYS * 10);
+  const days = Math.min(requestedDays, totalDays);
 
   // 构建每日组合净值
   const dailyValues = [];
   const initialValue = 100;
-  const totalDays = stockMap[holdings[0].code]?.prices.length || TRADING_DAYS * 5;
 
   for (let d = days; d > 0; d--) {
     const idx = totalDays - d;
+    if (idx < 0) continue; // 安全兜底
     let portfolioValue = 0;
 
     for (const h of holdings) {
@@ -56,6 +66,7 @@ export function runBacktest(stocksData, holdings, period) {
       if (!stock || idx >= stock.prices.length) continue;
       const price = stock.prices[idx];
       const startPrice = stock.prices[totalDays - days];
+      if (!price || !startPrice || startPrice === 0) continue;
       const weightFraction = h.weight / 100;
       portfolioValue += weightFraction * (price / startPrice);
     }
