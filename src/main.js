@@ -4,7 +4,6 @@
  */
 
 import './style.css';
-import { APP_STATE, showToast, updateStartButton } from './state.js';
 import { initBuilder, getHoldings, getPeriod } from './fund-builder.js';
 import { renderArena } from './arena.js';
 import { renderDiagnosis } from './diagnosis.js';
@@ -13,8 +12,19 @@ import { generateOpponents } from './engine/opponents.js';
 import { analyzeStyle } from './engine/analyzer.js';
 import { disposeAllCharts } from './charts.js';
 
-// 导出APP_STATE和showToast以保持兼容性
-export { APP_STATE, showToast, updateStartButton };
+// ==================== 全局状态 ====================
+export const APP_STATE = {
+  currentScreen: 'builder',
+  fundName: '',
+  holdings: [],
+  period: '1y',
+  customMonths: 18,
+  backtestResults: null,
+  stocksData: null,
+  userResult: null,
+  investAmount: 100000,
+  leverage: 1,
+};
 
 // ==================== 粒子背景 ====================
 let particleAnimId = null;
@@ -341,3 +351,21 @@ async function init() {
 }
 
 init();
+
+/** Toast */
+let _toastTimer = null;
+export function showToast(msg, type = 'info') {
+  const ex = document.getElementById('toast-msg'); if (ex) ex.remove();
+  if (_toastTimer) clearTimeout(_toastTimer);
+  const bg = type === 'error' ? 'bg-red-500/90' : 'bg-green-500/90';
+  const el = document.createElement('div'); el.id = 'toast-msg';
+  el.className = `fixed top-4 left-1/2 -translate-x-1/2 ${bg} text-white px-6 py-3 rounded-xl shadow-lg z-50 text-sm`;
+  el.textContent = msg; document.body.appendChild(el);
+  _toastTimer = setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+/** 按钮状态 */
+export function updateStartButton() {
+  const btn = document.getElementById('btn-start');
+  if (btn) btn.disabled = getHoldings().length < 1;
+}

@@ -1,34 +1,18 @@
 {
   "name": "ai-fund-manager-challenge",
-  "version": "1.0.0",
-  "description": "AI基金经理挑战赛 - 创建你的基金，与AI一较高下（Vibe Coding大赛参赛作品）",
+  "version": "2.0.0",
+  "description": "AI基金经理挑战赛 - 创建你的基金，与AI一较高下",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "server": "node server.js",
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "deploy": "node deploy-ghpages.js"
   },
   "devDependencies": {
     "vite": "^5.4.0",
     "tailwindcss": "^3.4.0",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35"
-  },
-  "keywords": [
-    "AI",
-    "基金",
-    "投资",
-    "模拟",
-    "回测",
-    "财经",
-    "游戏"
-  ],
-  "author": "AI创想家",
-  "license": "MIT"
+  }
 }
