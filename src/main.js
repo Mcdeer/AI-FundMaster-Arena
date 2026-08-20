@@ -6,11 +6,11 @@
 import './style.css';
 import { initBuilder, getHoldings, getPeriod } from './fund-builder.js';
 import { renderArena } from './arena.js';
-import { renderDiagnosis } from './diagnosis.js';
+import { renderDiagnosis, updateCommentary } from './diagnosis.js';
 import { runBacktest } from './engine/backtest.js';
 import { generateOpponents } from './engine/opponents.js';
 import { analyzeStyle } from './engine/analyzer.js';
-import { preloadCommentary, getCommentary, renderMarkdown } from './services/llm.js';
+import { preloadCommentary, getCommentary, isLoading } from './services/llm.js';
 import { disposeAllCharts } from './charts.js';
 
 // ==================== 全局状态 ====================
@@ -205,6 +205,7 @@ async function handleStart() {
 
 async function handleDiagnosis() {
   switchScreen('diagnosis');
+
   const resultForAnalysis = {
     ...APP_STATE.userResult,
     totalReturn: APP_STATE.userResult.totalReturn * APP_STATE.leverage,
@@ -213,17 +214,22 @@ async function handleDiagnosis() {
   const analysis = analyzeStyle(APP_STATE.stocksData, APP_STATE.holdings, resultForAnalysis);
   analysis.metrics.leverage = APP_STATE.leverage;
 
-  // 获取预加载的 AI 点评（已经提前请求了）
-  const aiResults = await getCommentary();
-  if (aiResults && aiResults.length > 0) {
-    // 渲染所有模型的结果
-    analysis.aiResults = aiResults.map(r => ({
-      model: r.model,
-      html: renderMarkdown(r.text),
-    }));
+  // 先渲染诊断页（显示加载状态或用已缓存的结果）
+  const stillLoading = isLoading();
+  let llmStatus = { results: null, errors: [], loading: stillLoading };
+
+  // 如果LLM已经完成（成功或失败），尝试获取结果
+  if (!stillLoading) {
+    llmStatus = await getCommentary();
   }
 
-  renderDiagnosis(analysis);
+  renderDiagnosis(analysis, llmStatus);
+
+  // 如果还在加载，异步等待结果后更新
+  if (stillLoading) {
+    llmStatus = await getCommentary();
+    updateCommentary(llmStatus);
+  }
 }
 
 function handleRestart() {

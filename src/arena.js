@@ -235,39 +235,72 @@ function getMetricTooltip(metric) {
   return tooltips[metric] || metric;
 }
 
-// 显示指标详情
+// 显示指标详情弹窗
 if (!window.showMetricDetail) {
   window.showMetricDetail = function(metric) {
     const details = {
       sharpe: {
         title: '夏普比率 (Sharpe Ratio)',
-        content: '夏普比率 = (年化收益率 - 无风险利率) / 年化波动率\n\n这是最著名的风险调整收益指标，由诺贝尔经济学奖得主威廉·夏普提出。\n\n解读标准：\n• > 2.0：卓越，顶级基金水平\n• 1.0-2.0：优秀，值得投资\n• 0.5-1.0：一般，勉强可接受\n• < 0.5：较差，风险收益比不佳\n\n注意：夏普比率惩罚所有波动（包括上涨），所以牛市中可能偏低。'
+        content: '夏普比率 = (年化收益率 - 无风险利率) / 年化波动率\n\n由诺贝尔经济学奖得主威廉·夏普提出的最著名风险调整收益指标。\n\n解读标准：\n• > 2.0：卓越，顶级基金水平\n• 1.0-2.0：优秀，值得投资\n• 0.5-1.0：一般，勉强可接受\n• < 0.5：较差，风险收益比不佳\n\n注意：夏普比率惩罚所有波动（包括上涨），牛市中可能偏低。',
       },
       sortino: {
         title: '索提诺比率 (Sortino Ratio)',
-        content: '索提诺比率 = (年化收益率 - 无风险利率) / 下行标准差\n\n夏普比率的改进版，只惩罚下行波动，不惩罚上涨波动。\n\n适用场景：\n• 更适合评估偏股型基金\n• 对非对称收益分布更准确\n• 更能反映投资者的真实感受\n\n一般来说，索提诺比率 > 夏普比率，因为排除了上涨波动。'
+        content: '索提诺比率 = (年化收益率 - 无风险利率) / 下行标准差\n\n夏普比率的改进版，只惩罚下行波动，不惩罚上涨波动。\n\n适用场景：\n• 更适合评估偏股型基金\n• 对非对称收益分布更准确\n• 更能反映投资者的真实感受\n\n一般来说，索提诺比率 > 夏普比率，因为排除了上涨波动。',
       },
       information: {
         title: '信息比率 (Information Ratio)',
-        content: '信息比率 = 超额收益 / 跟踪误差\n\n衡量基金经理的主动管理能力，即相对于基准创造了多少超额收益。\n\n解读标准：\n• > 1.0：卓越的主动管理能力\n• 0.5-1.0：良好的主动管理能力\n• 0-0.5：一般的主动管理能力\n• < 0：不如买指数基金\n\n这是机构投资者评估基金经理的核心指标。'
+        content: '信息比率 = 超额收益 / 跟踪误差\n\n衡量基金经理的主动管理能力，即相对于基准创造了多少超额收益。\n\n解读标准：\n• > 1.0：卓越的主动管理能力\n• 0.5-1.0：良好的主动管理能力\n• 0-0.5：一般的主动管理能力\n• < 0：不如买指数基金\n\n这是机构投资者评估基金经理的核心指标。',
       },
       calmar: {
         title: 'Calmar比率',
-        content: 'Calmar比率 = 年化收益率 / 最大回撤\n\n用最大回撤代替波动率来衡量风险，更适合长期投资者。\n\n特点：\n• 关注最坏情况下的表现\n• 更适合评估稳健型基金\n• 对极端风险更敏感\n\n一般来说，Calmar比率 > 2 说明风险收益比良好。'
+        content: 'Calmar比率 = 年化收益率 / 最大回撤\n\n用最大回撤代替波动率来衡量风险，更适合长期投资者。\n\n特点：\n• 关注最坏情况下的表现\n• 更适合评估稳健型基金\n• 对极端风险更敏感\n\n一般来说，Calmar比率 > 2 说明风险收益比良好。',
       },
       profitloss: {
         title: '盈亏比',
-        content: '盈亏比 = 平均盈利 / 平均亏损\n\n衡量交易系统的质量，反映"赚的时候赚多少，亏的时候亏多少"。\n\n解读：\n• > 2.0：优秀，赚多亏少\n• 1.5-2.0：良好\n• 1.0-1.5：一般\n• < 1.0：危险，赚少亏多\n\n注意：盈亏比需要结合胜率一起看。高盈亏比+低胜率可能是"三年不开张，开张吃三年"的类型。'
+        content: '盈亏比 = 平均盈利 / 平均亏损\n\n衡量交易系统的质量，反映"赚的时候赚多少，亏的时候亏多少"。\n\n解读：\n• > 2.0：优秀，赚多亏少\n• 1.5-2.0：良好\n• 1.0-1.5：一般\n• < 1.0：危险，赚少亏多\n\n注意：盈亏比需要结合胜率一起看。高盈亏比+低胜率可能是"三年不开张，开张吃三年"的类型。',
       },
       rating: {
         title: '五星基金评级体系',
-        content: '综合评分体系，基于以下维度：\n\n1. 夏普比率（权重30%）\n   - 衡量风险调整收益\n\n2. 最大回撤（权重25%）\n   - 衡量风险控制能力\n\n3. 年化收益（权重25%）\n   - 衡量绝对收益能力\n\n4. 胜率（权重20%）\n   - 衡量稳定性\n\n评级标准：\n• ★★★★★：4-5分，顶级基金\n• ★★★★☆：3-4分，优秀基金\n• ★★★☆☆：2-3分，良好基金\n• ★★☆☆☆：1-2分，一般基金\n• ★☆☆☆☆：<1分，需谨慎'
-      }
+        content: '综合评分体系，基于以下维度：\n\n1. 夏普比率（权重30%）\n   衡量风险调整收益\n\n2. 最大回撤（权重25%）\n   衡量风险控制能力\n\n3. 年化收益（权重25%）\n   衡量绝对收益能力\n\n4. 胜率（权重20%）\n   衡量稳定性\n\n评级标准：\n• ★★★★★：4-5分，顶级基金\n• ★★★★☆：3-4分，优秀基金\n• ★★★☆☆：2-3分，良好基金\n• ★★☆☆☆：1-2分，一般基金\n• ★☆☆☆☆：<1分，需谨慎',
+      },
     };
-    
+
     const detail = details[metric];
-    if (detail) {
-      alert(`${detail.title}\n\n${detail.content}`);
-    }
+    if (!detail) return;
+
+    // 移除已有弹窗
+    document.querySelector('.metric-modal-overlay')?.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'metric-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm';
+    modal.innerHTML = `
+      <div class="bg-dark-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-dark-500 shadow-2xl animate-fade-in max-h-[80vh] overflow-y-auto">
+        <div class="flex items-start justify-between mb-4">
+          <h3 class="text-lg font-bold text-white">${detail.title}</h3>
+          <button class="text-gray-500 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <div class="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+          ${detail.content}
+        </div>
+        <div class="mt-4 pt-3 border-t border-dark-600/30">
+          <button class="metric-modal-close w-full bg-dark-600/50 text-gray-400 border border-dark-500 rounded-lg py-2.5 text-sm font-medium hover:bg-dark-500 hover:text-white transition-colors">
+            关闭
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 绑定关闭事件
+    const closeBtn = modal.querySelector('.metric-modal-close');
+    const xBtn = modal.querySelector('button');
+    const close = () => modal.remove();
+    closeBtn?.addEventListener('click', close);
+    xBtn?.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    // ESC 关闭
+    const onEsc = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+    document.addEventListener('keydown', onEsc);
   };
 }

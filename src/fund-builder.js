@@ -108,9 +108,15 @@ if (!marketTabListenersBound) {
   // 自定义月份输入（只绑定一次）
   const customInput = document.getElementById('custom-months');
   if (customInput && !customInputListenerBound) {
-    customInput.addEventListener('input', () => {
-      APP_STATE.customMonths = parseInt(customInput.value) || 18;
-    });
+    const validate = () => {
+      let val = parseInt(customInput.value);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 120) val = 120;
+      customInput.value = val;
+      APP_STATE.customMonths = val;
+    };
+    customInput.addEventListener('input', validate);
+    customInput.addEventListener('blur', validate);
     customInputListenerBound = true;
   }
 

@@ -28,7 +28,8 @@ const PERIOD_MAP = {
 function getPeriodDays(period) {
   if (period.startsWith('custom')) {
     const months = parseInt(period.replace('custom', '')) || 18;
-    return Math.floor(TRADING_DAYS * months / 12);
+    const clamped = Math.max(1, Math.min(120, months)); // 1~120月兜底
+    return Math.floor(TRADING_DAYS * clamped / 12);
   }
   return PERIOD_MAP[period] || TRADING_DAYS;
 }

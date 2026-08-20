@@ -33,9 +33,9 @@ function generateBenchmarks(stocksData, period) {
   const nasdaqH = nasdaq.map(s => ({ code: s.code, weight: roundTo(100 / nasdaq.length, 1) }));
 
   return [
-    makeOpponent('benchmark-csi300', '🇨🇳 沪深300', 'A股大盘蓝筹基准', '🇨🇳', csi300H, stocksData, period),
-    makeOpponent('benchmark-gem', '🇨🇳 创业板指', 'A股成长创新基准', '🇨🇳', gemH, stocksData, period),
-    makeOpponent('benchmark-nasdaq', '🇺🇸 纳斯达克100', '美股科技龙头基准', '🇺🇸', nasdaqH, stocksData, period),
+    makeOpponent('benchmark-csi300', '沪深300', 'A股大盘蓝筹基准', '🇨🇳', csi300H, stocksData, period),
+    makeOpponent('benchmark-gem', '创业板指', 'A股成长创新基准', '🇨🇳', gemH, stocksData, period),
+    makeOpponent('benchmark-nasdaq', '纳斯达克100', '美股科技龙头基准', '🇺🇸', nasdaqH, stocksData, period),
   ];
 }
 
@@ -81,7 +81,7 @@ function makeOpponent(id, name, desc, icon, holdings, stocksData, period) {
   result.description = desc;
   result.icon = icon;
   result.isUser = false;
-  result.isBenchmark = (icon === '📊');
+  result.isBenchmark = id.startsWith('benchmark-');
   // 保存持仓信息用于展示
   result.holdingsDetail = holdings.map(h => {
     const stock = stocksData.stocks.find(s => s.code === h.code);
